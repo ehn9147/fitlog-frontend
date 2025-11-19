@@ -6,7 +6,6 @@ const STORAGE_KEYS = {
   WORKOUTS: 'fitlog_workouts',
   SETTINGS: 'fitlog_settings',
 };
-
 // User operations
 export const saveUser = (user: User): void => {
   const users = getUsers();
@@ -103,3 +102,4 @@ const getDefaultSettings = (): UserSettings => ({
   darkMode: false,
   dataBackup: true,
 });
+

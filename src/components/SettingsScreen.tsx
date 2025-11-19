@@ -18,21 +18,24 @@ import {
 } from "lucide-react";
 import { useApp } from "../lib/context";
 import { EditProfileDialog } from "./EditProfileDialog";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner"; // 👈 fixed import
 
 export function SettingsScreen() {
   const { user, settings, updateSettings, logout } = useApp();
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  const handleToggleSetting = (key: keyof typeof settings.notifications, value: boolean) => {
+  const handleToggleSetting = (
+    key: keyof typeof settings.notifications,
+    value: boolean
+  ) => {
     if (!settings) return;
     
     updateSettings({
       ...settings,
       notifications: {
         ...settings.notifications,
-        [key]: value
-      }
+        [key]: value,
+      },
     });
     
     toast.success("Settings updated");
@@ -43,7 +46,7 @@ export function SettingsScreen() {
     
     updateSettings({
       ...settings,
-      darkMode: value
+      darkMode: value,
     });
     
     toast.info(value ? "Dark mode enabled" : "Dark mode disabled");
@@ -54,7 +57,7 @@ export function SettingsScreen() {
     
     updateSettings({
       ...settings,
-      dataBackup: value
+      dataBackup: value,
     });
     
     toast.success(value ? "Backup enabled" : "Backup disabled");
@@ -62,9 +65,9 @@ export function SettingsScreen() {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -85,16 +88,22 @@ export function SettingsScreen() {
           <div className="flex items-center gap-4">
             <Avatar className="w-16 h-16 wireframe-avatar">
               <AvatarImage src="" />
-              <AvatarFallback className="font-mono">{user ? getInitials(user.name) : 'U'}</AvatarFallback>
+              <AvatarFallback className="font-mono">
+                {user ? getInitials(user.name) : "U"}
+              </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h3 className="font-medium uppercase tracking-wide">{user?.name.toUpperCase()}</h3>
-              <p className="text-sm text-muted-foreground font-mono">{user?.email}</p>
+              <h3 className="font-medium uppercase tracking-wide">
+                {user ? user.name.toUpperCase() : ""} {/* 👈 safe now */}
+              </h3>
+              <p className="text-sm text-muted-foreground font-mono">
+                {user?.email}
+              </p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="wireframe-button" 
+            <Button
+              variant="outline"
+              size="sm"
+              className="wireframe-button"
               data-variant="outline"
               onClick={() => setShowEditProfile(true)}
             >
@@ -117,12 +126,14 @@ export function SettingsScreen() {
           <div className="flex justify-between items-center">
             <div>
               <Label className="uppercase tracking-wide">Weekly workout goal</Label>
-              <p className="text-sm text-muted-foreground font-mono">Currently set to {user?.weeklyGoal} workouts</p>
+              <p className="text-sm text-muted-foreground font-mono">
+                Currently set to {user?.weeklyGoal} workouts
+              </p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="wireframe-button" 
+            <Button
+              variant="outline"
+              size="sm"
+              className="wireframe-button"
               data-variant="outline"
               onClick={() => setShowEditProfile(true)}
             >
@@ -133,12 +144,14 @@ export function SettingsScreen() {
           <div className="flex justify-between items-center">
             <div>
               <Label className="uppercase tracking-wide">Workout reminders</Label>
-              <p className="text-sm text-muted-foreground font-mono">Daily at {settings?.reminderTime || '18:00'}</p>
+              <p className="text-sm text-muted-foreground font-mono">
+                Daily at {settings?.reminderTime || "18:00"}
+              </p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="wireframe-button" 
+            <Button
+              variant="outline"
+              size="sm"
+              className="wireframe-button"
               data-variant="outline"
               onClick={() => toast.info("Reminder scheduling coming soon!")}
             >
@@ -161,36 +174,48 @@ export function SettingsScreen() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="uppercase tracking-wide">Workout reminders</Label>
-              <p className="text-sm text-muted-foreground font-mono">Get notified when it's time to work out</p>
+              <p className="text-sm text-muted-foreground font-mono">
+                Get notified when it's time to work out
+              </p>
             </div>
-            <Switch 
-              checked={settings?.notifications.workoutReminders} 
-              onCheckedChange={(checked) => handleToggleSetting('workoutReminders', checked)}
-              className="wireframe-switch" 
+            <Switch
+              checked={settings?.notifications.workoutReminders}
+              onCheckedChange={(checked) =>
+                handleToggleSetting("workoutReminders", checked)
+              }
+              className="wireframe-switch"
             />
           </div>
           <Separator className="wireframe-separator" />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="uppercase tracking-wide">Achievement notifications</Label>
-              <p className="text-sm text-muted-foreground font-mono">Celebrate your fitness milestones</p>
+              <p className="text-sm text-muted-foreground font-mono">
+                Celebrate your fitness milestones
+              </p>
             </div>
-            <Switch 
+            <Switch
               checked={settings?.notifications.achievements}
-              onCheckedChange={(checked) => handleToggleSetting('achievements', checked)}
-              className="wireframe-switch" 
+              onCheckedChange={(checked) =>
+                handleToggleSetting("achievements", checked)
+              }
+              className="wireframe-switch"
             />
           </div>
           <Separator className="wireframe-separator" />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="uppercase tracking-wide">Daily tips</Label>
-              <p className="text-sm text-muted-foreground font-mono">Receive daily motivation and tips</p>
+              <p className="text-sm text-muted-foreground font-mono">
+                Receive daily motivation and tips
+              </p>
             </div>
-            <Switch 
+            <Switch
               checked={settings?.notifications.dailyTips}
-              onCheckedChange={(checked) => handleToggleSetting('dailyTips', checked)}
-              className="wireframe-switch" 
+              onCheckedChange={(checked) =>
+                handleToggleSetting("dailyTips", checked)
+              }
+              className="wireframe-switch"
             />
           </div>
         </CardContent>
@@ -207,10 +232,10 @@ export function SettingsScreen() {
               <Moon className="w-4 h-4" />
               <Label className="uppercase tracking-wide">Dark mode</Label>
             </div>
-            <Switch 
+            <Switch
               checked={settings?.darkMode}
               onCheckedChange={handleToggleDarkMode}
-              className="wireframe-switch" 
+              className="wireframe-switch"
             />
           </div>
           <Separator className="wireframe-separator" />
@@ -219,10 +244,10 @@ export function SettingsScreen() {
               <Shield className="w-4 h-4" />
               <Label className="uppercase tracking-wide">Data backup</Label>
             </div>
-            <Switch 
+            <Switch
               checked={settings?.dataBackup}
               onCheckedChange={handleToggleBackup}
-              className="wireframe-switch" 
+              className="wireframe-switch"
             />
           </div>
         </CardContent>
@@ -234,18 +259,18 @@ export function SettingsScreen() {
           <CardTitle className="uppercase tracking-wide">Support</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start wireframe-button" 
+          <Button
+            variant="ghost"
+            className="w-full justify-start wireframe-button"
             data-variant="ghost"
             onClick={() => toast.info("Help & FAQ coming soon!")}
           >
             <HelpCircle className="w-4 h-4 mr-2" />
             Help & FAQ
           </Button>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start wireframe-button" 
+          <Button
+            variant="ghost"
+            className="w-full justify-start wireframe-button"
             data-variant="ghost"
             onClick={() => toast.info("Contact support: support@fitlog.app")}
           >
@@ -258,8 +283,8 @@ export function SettingsScreen() {
       {/* Sign Out */}
       <Card className="wireframe-card">
         <CardContent className="pt-6">
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             className="w-full wireframe-button"
             onClick={() => {
               logout();
@@ -272,7 +297,7 @@ export function SettingsScreen() {
         </CardContent>
       </Card>
 
-      <EditProfileDialog 
+      <EditProfileDialog
         open={showEditProfile}
         onClose={() => setShowEditProfile(false)}
       />

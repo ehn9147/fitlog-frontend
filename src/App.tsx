@@ -1,17 +1,24 @@
 // src/App.tsx
-import { useApp } from "./lib/context";
-import { LoginScreen } from "./components/LoginScreen";
 import { MainApp } from "./components/MainApp";
+import { LoginScreen } from "./components/LoginScreen";
+import { AppProvider, useApp } from "./lib/context";
 
-export default function App() {
+function AppContent() {
   const { user } = useApp();
 
-  // If no logged-in user, show login screen
+  // If there's no user, only show login
   if (!user) {
     return <LoginScreen />;
   }
 
-  // If logged in, show the main tabbed app
+  // Once logged in, show the main app (home/history/settings)
   return <MainApp />;
 }
 
+export default function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+}

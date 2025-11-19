@@ -1,5 +1,3 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, Workout, UserSettings } from "../types";
 import {
   getCurrentUser,
   setCurrentUser,
@@ -9,7 +7,9 @@ import {
   getSettings,
   saveSettings as saveSettingsToStorage,
   saveUser as saveUserToStorage,
++ clearCurrentUser,
 } from "./storage";
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -147,17 +147,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // ⭐ LOGOUT: only clear current session, keep remembered accounts
-  const logout = () => {
-    // clear current session
-    setCurrentUser(null);   // removes fitlog_current_user
+   const logout = () => {
     setUser(null);
-
-    // clear in-memory state
     setWorkouts([]);
     setSettings(null);
-
-    // go to login page
-    window.location.href = "/login";
+    clearCurrentUser();   // 🔹 completely forget who was logged in
   };
 
   const refreshWorkouts = () => {
