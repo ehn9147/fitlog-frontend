@@ -38,3 +38,76 @@ export interface UserSettings {
   darkMode: boolean;
   dataBackup: boolean;
 }
+body {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.wireframe-card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+.wireframe-button[data-variant="default"],
+.wireframe-button:not([data-variant]) {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+}
+
+.wireframe-button[data-variant="outline"] {
+  background: transparent;
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+.wireframe-button[data-variant="ghost"] {
+  color: #000000;
+}
+
+.wireframe-avatar {
+  border: 1px solid rgba(0,0,0,0.2);
+}
+
+.wireframe-separator {
+  background: rgba(0,0,0,0.15);
+}
+
+/* ===================================== */
+/*               DARK MODE               */
+/* ===================================== */
+
+.dark body {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.dark .wireframe-card {
+  background: #111111;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.dark .wireframe-button[data-variant="default"],
+.dark .wireframe-button:not([data-variant]) {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+}
+
+.dark .wireframe-button[data-variant="outline"] {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+}
+
+.dark .wireframe-button[data-variant="ghost"] {
+  color: #ffffff;
+}
+
+.dark .wireframe-avatar {
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.dark .wireframe-separator {
+  background: rgba(255,255,255,0.2);
+}

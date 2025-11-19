@@ -1,35 +1,43 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { 
-  User, 
-  Bell, 
-  Moon, 
-  Shield, 
-  HelpCircle, 
-  LogOut, 
+import {
+  User,
+  Bell,
+  Moon,
+  Shield,
+  HelpCircle,
+  LogOut,
   Edit,
   Target,
-  Calendar
+  Calendar,
 } from "lucide-react";
 import { useApp } from "../lib/context";
 import { EditProfileDialog } from "./EditProfileDialog";
-import { toast } from "sonner"; // 👈 fixed import
+import { ReminderScheduleDialog } from "./ReminderScheduleDialog";
+import { toast } from "sonner";
 
 export function SettingsScreen() {
   const { user, settings, updateSettings, logout } = useApp();
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
 
   const handleToggleSetting = (
-    key: keyof typeof settings.notifications,
+    key: "workoutReminders" | "achievements" | "dailyTips",
     value: boolean
   ) => {
     if (!settings) return;
-    
+
     updateSettings({
       ...settings,
       notifications: {
@@ -37,29 +45,29 @@ export function SettingsScreen() {
         [key]: value,
       },
     });
-    
+
     toast.success("Settings updated");
   };
 
   const handleToggleDarkMode = (value: boolean) => {
     if (!settings) return;
-    
+
     updateSettings({
       ...settings,
       darkMode: value,
     });
-    
+
     toast.info(value ? "Dark mode enabled" : "Dark mode disabled");
   };
 
   const handleToggleBackup = (value: boolean) => {
     if (!settings) return;
-    
+
     updateSettings({
       ...settings,
       dataBackup: value,
     });
-    
+
     toast.success(value ? "Backup enabled" : "Backup disabled");
   };
 
@@ -83,6 +91,9 @@ export function SettingsScreen() {
             <User className="w-5 h-5" />
             Profile
           </CardTitle>
+          <CardDescription className="font-mono">
+            Manage your account and workout goals.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -94,7 +105,7 @@ export function SettingsScreen() {
             </Avatar>
             <div className="flex-1">
               <h3 className="font-medium uppercase tracking-wide">
-                {user ? user.name.toUpperCase() : ""} {/* 👈 safe now */}
+                {user ? user.name.toUpperCase() : ""}
               </h3>
               <p className="text-sm text-muted-foreground font-mono">
                 {user?.email}
@@ -125,9 +136,11 @@ export function SettingsScreen() {
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <Label className="uppercase tracking-wide">Weekly workout goal</Label>
+              <Label className="uppercase tracking-wide">
+                Weekly workout goal
+              </Label>
               <p className="text-sm text-muted-foreground font-mono">
-                Currently set to {user?.weeklyGoal} workouts
+                Currently set to {user?.weeklyGoal ?? 4} workouts
               </p>
             </div>
             <Button
@@ -143,7 +156,9 @@ export function SettingsScreen() {
           <Separator className="wireframe-separator" />
           <div className="flex justify-between items-center">
             <div>
-              <Label className="uppercase tracking-wide">Workout reminders</Label>
+              <Label className="uppercase tracking-wide">
+                Workout reminders
+              </Label>
               <p className="text-sm text-muted-foreground font-mono">
                 Daily at {settings?.reminderTime || "18:00"}
               </p>
@@ -153,7 +168,13 @@ export function SettingsScreen() {
               size="sm"
               className="wireframe-button"
               data-variant="outline"
-              onClick={() => toast.info("Reminder scheduling coming soon!")}
+              onClick={() => {
+                if (!settings) {
+                  toast.error("Settings are still loading");
+                  return;
+                }
+                setShowReminderDialog(true);
+              }}
             >
               <Calendar className="w-4 h-4 mr-2" />
               Schedule
@@ -173,7 +194,9 @@ export function SettingsScreen() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="uppercase tracking-wide">Workout reminders</Label>
+              <Label className="uppercase tracking-wide">
+                Workout reminders
+              </Label>
               <p className="text-sm text-muted-foreground font-mono">
                 Get notified when it's time to work out
               </p>
@@ -189,7 +212,9 @@ export function SettingsScreen() {
           <Separator className="wireframe-separator" />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="uppercase tracking-wide">Achievement notifications</Label>
+              <Label className="uppercase tracking-wide">
+                Achievement notifications
+              </Label>
               <p className="text-sm text-muted-foreground font-mono">
                 Celebrate your fitness milestones
               </p>
@@ -224,7 +249,9 @@ export function SettingsScreen() {
       {/* App Preferences */}
       <Card className="wireframe-card">
         <CardHeader>
-          <CardTitle className="uppercase tracking-wide">App Preferences</CardTitle>
+          <CardTitle className="uppercase tracking-wide">
+            App Preferences
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -272,7 +299,9 @@ export function SettingsScreen() {
             variant="ghost"
             className="w-full justify-start wireframe-button"
             data-variant="ghost"
-            onClick={() => toast.info("Contact support: support@fitlog.app")}
+            onClick={() =>
+              toast.info("Contact support: support@fitlog.app")
+            }
           >
             <User className="w-4 h-4 mr-2" />
             Contact Support
@@ -296,6 +325,22 @@ export function SettingsScreen() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <ReminderScheduleDialog
+        open={showReminderDialog}
+        onClose={() => setShowReminderDialog(false)}
+        currentTime={settings?.reminderTime || "18:00"}
+        onSave={(newTime) => {
+          if (!settings) return;
+          updateSettings({
+            ...settings,
+            reminderTime: newTime,
+          });
+          toast.success("Workout reminder time updated");
+          setShowReminderDialog(false);
+        }}
+      />
 
       <EditProfileDialog
         open={showEditProfile}
