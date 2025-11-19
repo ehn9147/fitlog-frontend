@@ -15,7 +15,9 @@ export function EditProfileDialog({ open, onClose }: EditProfileDialogProps) {
   const { user, updateUser } = useApp();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [weeklyGoal, setWeeklyGoal] = useState(user?.weeklyGoal.toString() || '4');
+  const [weeklyGoal, setWeeklyGoal] = useState(
+    user?.weeklyGoal.toString() || '4'
+  );
 
   useEffect(() => {
     if (user) {
@@ -32,7 +34,7 @@ export function EditProfileDialog({ open, onClose }: EditProfileDialogProps) {
       ...user,
       name,
       email,
-      weeklyGoal: parseInt(weeklyGoal) || 4
+      weeklyGoal: parseInt(weeklyGoal) || 4,
     });
 
     toast.success('Profile updated successfully');
@@ -41,65 +43,77 @@ export function EditProfileDialog({ open, onClose }: EditProfileDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md wireframe-dialog">
-        <DialogHeader>
-          <DialogTitle className="uppercase tracking-wide font-mono">Edit Profile</DialogTitle>
-        </DialogHeader>
+      {/* unified dialog shell */}
+      <DialogContent className="sm:max-w-md bg-white rounded-none border-[6px] border-black py-8">
+        {/* inner padding so content never touches the border */}
+        <div className="px-12">
+          <DialogHeader>
+            <DialogTitle className="uppercase tracking-wide font-mono">
+              Edit Profile
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="uppercase tracking-wide">Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="wireframe-input"
-            />
-          </div>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="uppercase tracking-wide">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="wireframe-input"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email" className="uppercase tracking-wide">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="wireframe-input"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="uppercase tracking-wide">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="wireframe-input"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="goal" className="uppercase tracking-wide">Weekly Workout Goal</Label>
-            <Input
-              id="goal"
-              type="number"
-              min="1"
-              max="7"
-              value={weeklyGoal}
-              onChange={(e) => setWeeklyGoal(e.target.value)}
-              className="wireframe-input"
-            />
-            <p className="text-xs text-muted-foreground font-mono">
-              Number of workouts you want to complete each week
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="goal" className="uppercase tracking-wide">
+                Weekly Workout Goal
+              </Label>
+              <Input
+                id="goal"
+                type="number"
+                min="1"
+                max="7"
+                value={weeklyGoal}
+                onChange={(e) => setWeeklyGoal(e.target.value)}
+                className="wireframe-input"
+              />
+              <p className="text-xs text-muted-foreground font-mono">
+                Number of workouts you want to complete each week
+              </p>
+            </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 wireframe-button"
-              data-variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!name || !email}
-              className="flex-1 wireframe-button"
-            >
-              Save Changes
-            </Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="flex-1 wireframe-button"
+                data-variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={!name || !email}
+                className="flex-1 wireframe-button"
+              >
+                Save Changes
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

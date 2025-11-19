@@ -2,45 +2,58 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
-import { Calendar, Clock, Target, TrendingUp } from "lucide-react";
+import { Calendar, Target, TrendingUp } from "lucide-react";
 import { useApp } from "../lib/context";
 import { WorkoutDialog } from "./WorkoutDialog";
 import { WorkoutDetailsDialog } from "./WorkoutDetailsDialog";
 import { Workout } from "../types";
+import { StartWorkoutDialog } from "./StartWorkoutDialog";
 
 export function HomeScreen() {
   const { user, workouts } = useApp();
-  const [showNewWorkout, setShowNewWorkout] = useState(false);
+  const [showStartWorkout, setShowStartWorkout] = useState(false);
   const [showLogPrevious, setShowLogPrevious] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
 
-  // Calculate weekly progress
+  // Safely get week start (Sunday)
   const getWeekStart = () => {
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const diff = now.getDate() - dayOfWeek;
-    return new Date(now.setDate(diff));
+    const dayOfWeek = now.getDay(); // 0 = Sunday
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - dayOfWeek);
+    return start;
   };
 
   const weekStart = getWeekStart();
-  const thisWeekWorkouts = workouts.filter(w => {
+
+  const thisWeekWorkouts = workouts.filter((w) => {
+    if (!w.date) return false;
     const workoutDate = new Date(w.date);
+    if (isNaN(workoutDate.getTime())) return false;
     return workoutDate >= weekStart;
   });
 
-  const weeklyProgress = user ? (thisWeekWorkouts.length / user.weeklyGoal) * 100 : 0;
+  const weeklyGoal = user?.weeklyGoal && user.weeklyGoal > 0 ? user.weeklyGoal : 4;
+  const weeklyProgress = (thisWeekWorkouts.length / weeklyGoal) * 100;
+
+  // Assume workouts array is already sorted newest → oldest in context.
   const recentWorkouts = workouts.slice(0, 2);
 
   const formatRelativeDate = (dateString: string) => {
+    if (!dateString) return "Unknown date";
     const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (isNaN(date.getTime())) return dateString; // fall back to raw
 
-    if (diffDays === 0 || diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays === 3) return '2 days ago';
-    return `${diffDays - 1} days ago`;
+    const now = new Date();
+    const diffTime = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 14) return "1 week ago";
+    return `${Math.floor(diffDays / 7)} weeks ago`;
   };
 
   return (
@@ -51,8 +64,6 @@ export function HomeScreen() {
         <p className="text-muted-foreground">Ready for today's workout?</p>
       </div>
 
-
-
       {/* Weekly Goal Progress */}
       <Card className="wireframe-card">
         <CardHeader>
@@ -61,15 +72,20 @@ export function HomeScreen() {
             Weekly Goal
           </CardTitle>
           <CardDescription className="font-mono">
-            {thisWeekWorkouts.length} of {user?.weeklyGoal || 4} workouts completed
+            {thisWeekWorkouts.length} of {weeklyGoal} workouts completed
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Progress value={Math.min(weeklyProgress, 100)} className="mb-2 wireframe-progress" />
+          <Progress
+            value={Math.min(weeklyProgress, 100)}
+            className="mb-2 wireframe-progress"
+          />
           <p className="text-sm text-muted-foreground uppercase tracking-wide">
-            {thisWeekWorkouts.length >= (user?.weeklyGoal || 4)
+            {thisWeekWorkouts.length >= weeklyGoal
               ? "Goal achieved! Keep up the great work!"
-              : `${(user?.weeklyGoal || 4) - thisWeekWorkouts.length} more workout${(user?.weeklyGoal || 4) - thisWeekWorkouts.length === 1 ? '' : 's'} to reach your goal!`}
+              : `${weeklyGoal - thisWeekWorkouts.length} more workout${
+                  weeklyGoal - thisWeekWorkouts.length === 1 ? "" : "s"
+                } to reach your goal!`}
           </p>
         </CardContent>
       </Card>
@@ -80,18 +96,18 @@ export function HomeScreen() {
           <CardTitle className="uppercase tracking-wide">Quick Start</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button 
-            className="w-full justify-start wireframe-button" 
-            variant="outline" 
+          <Button
+            className="w-full justify-start wireframe-button"
+            variant="outline"
             data-variant="outline"
-            onClick={() => setShowNewWorkout(true)}
+            onClick={() => setShowStartWorkout(true)}
           >
             <TrendingUp className="w-4 h-4 mr-2" />
             Start New Workout
           </Button>
-          <Button 
-            className="w-full justify-start wireframe-button" 
-            variant="outline" 
+          <Button
+            className="w-full justify-start wireframe-button"
+            variant="outline"
             data-variant="outline"
             onClick={() => setShowLogPrevious(true)}
           >
@@ -113,37 +129,58 @@ export function HomeScreen() {
               <p className="text-sm mt-2">Start your fitness journey today!</p>
             </div>
           ) : (
-            recentWorkouts.map((workout) => (
-              <div 
-                key={workout.id}
-                className="flex justify-between items-center p-3 bg-muted wireframe-card cursor-pointer hover:bg-muted/80 transition-colors"
-                onClick={() => setSelectedWorkout(workout)}
-              >
-                <div>
-                  <div className="font-medium uppercase tracking-wide">{workout.name}</div>
-                  <div className="text-sm text-muted-foreground font-mono">
-                    {formatRelativeDate(workout.date)} • {workout.duration} min
+            recentWorkouts.map((workout) => {
+              const mainExercise = workout.exercises?.[0];
+
+              return (
+                <div
+                  key={workout.id}
+                  className="flex justify-between items-center p-3 bg-muted wireframe-card cursor-pointer hover:bg-muted/80 transition-colors"
+                  onClick={() => setSelectedWorkout(workout)}
+                >
+                  <div>
+                    <div className="font-medium uppercase tracking-wide">
+                      {workout.name || mainExercise?.name || "Workout"}
+                    </div>
+                    <div className="text-sm text-muted-foreground font-mono flex items-center gap-2">
+                      <span>
+                        {formatRelativeDate(workout.date)} •{" "}
+                        {workout.duration ?? 0} min
+                      </span>
+                      {mainExercise && (
+                        <span>
+                          • {mainExercise.sets} × {mainExercise.reps}{" "}
+                          {mainExercise.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {!mainExercise && (
+                    <div className="text-sm text-muted-foreground font-mono">
+                      {workout.exercises.length} exercise
+                      {workout.exercises.length !== 1 ? "s" : ""}
+                    </div>
+                  )}
                 </div>
-                <div className="text-sm text-muted-foreground font-mono">
-                  {workout.exercises.length} exercise{workout.exercises.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>
 
-      <WorkoutDialog 
-        open={showNewWorkout} 
-        onClose={() => setShowNewWorkout(false)} 
-      />
-      
-      <WorkoutDialog 
-        open={showLogPrevious} 
-        onClose={() => setShowLogPrevious(false)} 
+      {/* Start New Workout – suggestion only */}
+      <StartWorkoutDialog
+        open={showStartWorkout}
+        onClose={() => setShowStartWorkout(false)}
       />
 
+      {/* Log Previous Workout – full logging dialog */}
+      <WorkoutDialog
+        open={showLogPrevious}
+        onClose={() => setShowLogPrevious(false)}
+      />
+
+      {/* Details dialog for recent workouts */}
       <WorkoutDetailsDialog
         open={!!selectedWorkout}
         onClose={() => setSelectedWorkout(null)}

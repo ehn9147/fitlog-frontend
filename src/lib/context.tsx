@@ -1,24 +1,17 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import type { User, Workout, UserSettings } from "../types";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { User, Workout, UserSettings } from "../types";
 import {
   getCurrentUser,
   setCurrentUser,
+  getUserWorkouts,
+  saveWorkout as saveWorkoutToStorage,
+  deleteWorkout as deleteWorkoutFromStorage,
   getSettings,
   saveSettings as saveSettingsToStorage,
   saveUser as saveUserToStorage,
 } from "./storage";
-import {
-  fetchWorkouts,
-  createWorkout,
-  updateWorkoutApi,
-  deleteWorkoutApi,
-} from "./api";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 interface AppContextType {
   user: User | null;
@@ -26,150 +19,241 @@ interface AppContextType {
   settings: UserSettings | null;
   login: (user: User) => void;
   logout: () => void;
-  addWorkout: (workout: Workout) => Promise<void>;
-  updateWorkout: (workout: Workout) => Promise<void>;
-  deleteWorkout: (workoutId: string) => Promise<void>;
+  addWorkout: (workout: Workout) => void;
+  updateWorkout: (workout: Workout) => void;
+  deleteWorkout: (workoutId: string) => void;
   updateUser: (user: User) => void;
   updateSettings: (settings: UserSettings) => void;
-  refreshWorkouts: () => Promise<void>;
+  refreshWorkouts: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// ---- API helpers ----
+
+async function fetchWorkoutsFromApi(userId: string): Promise<Workout[]> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/workouts?userId=${encodeURIComponent(userId)}`
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch workouts: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function createWorkoutInApi(workout: Workout): Promise<Workout> {
+  const res = await fetch(`${API_BASE_URL}/api/workouts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(workout),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to create workout: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function updateWorkoutInApi(workout: Workout): Promise<Workout> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/workouts/${encodeURIComponent(workout.id)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(workout),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to update workout: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function deleteWorkoutInApi(id: string): Promise<void> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/workouts/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Failed to delete workout: ${res.status}`);
+  }
+}
+
+// ---- Context implementation ----
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [settings, setSettings] = useState<UserSettings | null>(null);
 
-  // Helper: load workouts from backend for a specific user
-  const loadWorkoutsFromBackend = async (userId: string) => {
-    try {
-      const data = await fetchWorkouts(userId);
-      setWorkouts(data);
-    } catch (err) {
-      console.error("Error loading workouts from backend:", err);
-      setWorkouts([]);
-    }
-  };
-
-  // Initialize on mount
+  // Load user + settings + workouts on startup
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      setSettings(getSettings(currentUser.id));
-      void loadWorkoutsFromBackend(currentUser.id);
+    const existingUser = getCurrentUser();
+    if (existingUser) {
+      setUser(existingUser);
+      loadSettings(existingUser);
+      loadWorkouts(existingUser);
     }
   }, []);
 
-  const login = (newUser: User) => {
-    setUser(newUser);
-    setCurrentUser(newUser);
-    setSettings(getSettings(newUser.id));
-    void loadWorkoutsFromBackend(newUser.id);
+  const loadSettings = (u: User) => {
+    const storedSettings = getSettings(u.id);
+    if (storedSettings) {
+      setSettings(storedSettings);
+    } else {
+      const defaultSettings: UserSettings = {
+        userId: u.id,
+        darkMode: false,
+        dataBackup: false,
+        reminderTime: "18:00",
+        notifications: {
+          workoutReminders: true,
+          achievements: true,
+          dailyTips: true,
+        },
+      };
+      setSettings(defaultSettings);
+      saveSettingsToStorage(defaultSettings);
+    }
   };
 
+  const loadWorkouts = async (u: User) => {
+    try {
+      const apiWorkouts = await fetchWorkoutsFromApi(u.id);
+      setWorkouts(apiWorkouts);
+    } catch (err) {
+      console.warn("API workouts failed, using local storage instead:", err);
+      const localWorkouts = getUserWorkouts(u.id) || [];
+      setWorkouts(localWorkouts);
+    }
+  };
+
+  // ⭐ LOGIN: remember account + set current session + redirect home
+  const login = (u: User) => {
+    // remember this account on this device
+    saveUserToStorage(u);     // goes into fitlog_users
+
+    // set as current session
+    setUser(u);
+    setCurrentUser(u);        // goes into fitlog_current_user
+
+    // load per-user state
+    loadSettings(u);
+    loadWorkouts(u);
+
+    // redirect to home
+    window.location.href = "/";
+  };
+
+  // ⭐ LOGOUT: only clear current session, keep remembered accounts
   const logout = () => {
+    // clear current session
+    setCurrentUser(null);   // removes fitlog_current_user
     setUser(null);
-    setCurrentUser(null);
+
+    // clear in-memory state
     setWorkouts([]);
     setSettings(null);
+
+    // go to login page
+    window.location.href = "/login";
   };
 
-  // Create workout in backend
-  const addWorkout = async (workout: Workout) => {
+  const refreshWorkouts = () => {
+    if (user) {
+      loadWorkouts(user);
+    }
+  };
+
+  const addWorkout = (workout: Workout) => {
     if (!user) return;
 
-    try {
-      const payload: Workout = {
-        ...workout,
-        userId: user.id,
-      };
+    // make sure workout is tied to the current user
+    const workoutWithUser: Workout = { ...workout, userId: user.id };
 
-      const created = await createWorkout(payload);
-      setWorkouts((prev) => [...prev, created]);
-    } catch (err) {
-      console.error("Failed to create workout", err);
-    }
+    (async () => {
+      try {
+        const saved = await createWorkoutInApi(workoutWithUser);
+        setWorkouts((prev) => [saved, ...prev]);
+        saveWorkoutToStorage(saved);
+      } catch (err) {
+        console.error("Failed to add workout via API, saving locally:", err);
+        saveWorkoutToStorage(workoutWithUser);
+        setWorkouts((prev) => [workoutWithUser, ...prev]);
+      }
+    })();
   };
 
-  // Update workout in backend
-  const updateWorkout = async (workout: Workout) => {
-    if (!user || !workout.id) return;
+  const updateWorkout = (workout: Workout) => {
+    if (!user) return;
 
-    try {
-      const payload: Workout = {
-        ...workout,
-        userId: user.id,
-      };
+    const workoutWithUser: Workout = { ...workout, userId: user.id };
 
-      const updated = await updateWorkoutApi(workout.id, payload);
-      setWorkouts((prev) =>
-        prev.map((w) => (w.id === updated.id ? updated : w))
-      );
-    } catch (err) {
-      console.error("Failed to update workout", err);
-    }
+    (async () => {
+      try {
+        const saved = await updateWorkoutInApi(workoutWithUser);
+        setWorkouts((prev) =>
+          prev.map((w) => (w.id === saved.id ? saved : w))
+        );
+        saveWorkoutToStorage(saved);
+      } catch (err) {
+        console.error("Failed to update workout via API, updating locally:", err);
+        setWorkouts((prev) =>
+          prev.map((w) => (w.id === workoutWithUser.id ? workoutWithUser : w))
+        );
+        saveWorkoutToStorage(workoutWithUser);
+      }
+    })();
   };
 
-  // Delete workout in backend
-  const deleteWorkout = async (workoutId: string) => {
-    try {
-      await deleteWorkoutApi(workoutId);
-      setWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
-    } catch (err) {
-      console.error("Failed to delete workout", err);
-    }
+  const deleteWorkout = (id: string) => {
+    if (!user) return;
+
+    (async () => {
+      try {
+        await deleteWorkoutInApi(id);
+      } catch (err) {
+        console.error("Failed to delete workout via API, deleting locally:", err);
+      } finally {
+        deleteWorkoutFromStorage(id);
+        setWorkouts((prev) => prev.filter((w) => w.id !== id));
+      }
+    })();
   };
 
-  const updateUser = (updatedUser: User) => {
-    saveUserToStorage(updatedUser);
-    setUser(updatedUser);
-    setCurrentUser(updatedUser);
+  const updateUser = (updated: User) => {
+    setUser(updated);
+    setCurrentUser(updated);
+    saveUserToStorage(updated);
   };
 
   const updateSettings = (newSettings: UserSettings) => {
-    if (user) {
-      saveSettingsToStorage(user.id, newSettings);
-      setSettings(newSettings);
-    }
+    setSettings(newSettings);
+    saveSettingsToStorage(newSettings);
   };
 
-  const refreshWorkouts = async () => {
-    if (!user) {
-      setWorkouts([]);
-      return;
-    }
-
-    await loadWorkoutsFromBackend(user.id);
+  const value: AppContextType = {
+    user,
+    workouts,
+    settings,
+    login,
+    logout,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    updateUser,
+    updateSettings,
+    refreshWorkouts,
   };
 
-  return (
-    <AppContext.Provider
-      value={{
-        user,
-        workouts,
-        settings,
-        login,
-        logout,
-        addWorkout,
-        updateWorkout,
-        deleteWorkout,
-        updateUser,
-        updateSettings,
-        refreshWorkouts,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export function useApp() {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error("useApp must be used within AppProvider");
+  const ctx = useContext(AppContext);
+  if (!ctx) {
+    throw new Error("useApp must be used within an AppProvider");
   }
-  return context;
+  return ctx;
 }
-

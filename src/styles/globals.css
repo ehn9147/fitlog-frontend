@@ -326,23 +326,6 @@ html {
     height: 100%;
   }
 
-  .wireframe-dialog {
-    border: 3px solid #000000;
-    border-radius: 0px;
-    background: #ffffff;
-    position: relative;
-  }
-  
-  .wireframe-dialog::before {
-    content: '';
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    right: 6px;
-    bottom: 6px;
-    border: 1px solid #cccccc;
-    pointer-events: none;
-  }
 
   .wireframe-badge {
     border: 1px solid #000000 !important;
@@ -458,4 +441,39 @@ body {
   font-family: 'JetBrains Mono', monospace, system-ui, -apple-system, sans-serif;
   font-weight: 400;
   letter-spacing: 0.25px;
+}
+.dialog-card {
+  border: 3px solid #000 !important;  /* keep solid */
+}
+
+.dialog-card::before {
+  display: none !important;           /* remove dashed border */
+}
+
+/* Remove dashed inner border for cards inside dialogs */
+.wireframe-dialog .wireframe-card::before {
+  display: none !important;
+}
+
+/* Make the card inside dialogs solid only */
+.wireframe-dialog .wireframe-card {
+  border: 3px solid #000 !important;
+  padding: 1rem;
+}
+/* --- FIX TABS LAYOUT OVERRIDES --- */
+
+/* Force TabsList to be a horizontal flex row */
+[data-radix-tabs-list] {
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100% !important;
+  justify-content: space-between !important;
+}
+
+/* Ensure each tab button (TabsTrigger) does NOT become full width stacked */
+.wireframe-tab {
+  display: inline-flex !important;
+  width: auto !important;
+  align-items: center;
+  justify-content: center;
 }

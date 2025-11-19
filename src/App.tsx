@@ -1,23 +1,17 @@
-import { AppProvider, useApp } from "./lib/context";
+// src/App.tsx
+import { useApp } from "./lib/context";
 import { LoginScreen } from "./components/LoginScreen";
 import { MainApp } from "./components/MainApp";
-import { Toaster } from "./components/ui/sonner";
 
-function AppContent() {
+export default function App() {
   const { user } = useApp();
 
+  // If no logged-in user, show login screen
   if (!user) {
     return <LoginScreen />;
   }
 
+  // If logged in, show the main tabbed app
   return <MainApp />;
 }
 
-export default function App() {
-  return (
-    <AppProvider>
-      <AppContent />
-      <Toaster />
-    </AppProvider>
-  );
-}
