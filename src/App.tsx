@@ -2,6 +2,7 @@
 import { MainApp } from "./components/MainApp";
 import { LoginScreen } from "./components/LoginScreen";
 import { AppProvider, useApp } from "./lib/context";
+import { Toaster } from "sonner"; // 👈 add this
 
 function AppContent() {
   const { user } = useApp();
@@ -17,8 +18,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+
+      {/* 👇 sonner toast container – must be rendered once */}
+      <Toaster
+        richColors
+        closeButton
+        position="top-center"
+      />
+    </>
   );
 }
