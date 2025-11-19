@@ -139,26 +139,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ⭐ LOGIN: remember account + set current session (no redirect)
   const login = (u: User) => {
-    // remember this account on this device
-    saveUserToStorage(u); // goes into fitlog_users
-
-    // set as current session
+    saveUserToStorage(u);
     setUser(u);
-    setCurrentUser(u); // goes into fitlog_current_user
-
-    // load per-user state
+    setCurrentUser(u);
     loadSettings(u);
     loadWorkouts(u);
   };
 
   // ⭐ LOGOUT: clear current session (no redirect)
   const logout = () => {
-    // Clear React state
     setUser(null);
     setWorkouts([]);
     setSettings(null);
 
-    // Clear the current user from localStorage directly
     try {
       localStorage.removeItem("fitlog_current_user");
     } catch (err) {
@@ -175,7 +168,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addWorkout = (workout: Workout) => {
     if (!user) return;
 
-    // make sure workout is tied to the current user
     const workoutWithUser: Workout = { ...workout, userId: user.id };
 
     (async () => {
@@ -184,10 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setWorkouts((prev) => [saved, ...prev]);
         saveWorkoutToStorage(saved);
       } catch (err) {
-        console.error(
-          "Failed to add workout via API, saving locally:",
-          err
-        );
+        console.error("Failed to add workout via API, saving locally:", err);
         saveWorkoutToStorage(workoutWithUser);
         setWorkouts((prev) => [workoutWithUser, ...prev]);
       }
@@ -207,10 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         saveWorkoutToStorage(saved);
       } catch (err) {
-        console.error(
-          "Failed to update workout via API, updating locally:",
-          err
-        );
+        console.error("Failed to update workout via API, updating locally:", err);
         setWorkouts((prev) =>
           prev.map((w) =>
             w.id === workoutWithUser.id ? workoutWithUser : w
@@ -228,10 +214,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await deleteWorkoutInApi(id);
       } catch (err) {
-        console.error(
-          "Failed to delete workout via API, deleting locally:",
-          err
-        );
+        console.error("Failed to delete workout via API, deleting locally:", err);
       } finally {
         deleteWorkoutFromStorage(id);
         setWorkouts((prev) => prev.filter((w) => w.id !== id));
