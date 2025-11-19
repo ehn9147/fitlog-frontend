@@ -1,3 +1,13 @@
+// src/lib/context.tsx
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { User, Workout, UserSettings } from "../types";
+
 import {
   getCurrentUser,
   setCurrentUser,
@@ -7,9 +17,7 @@ import {
   getSettings,
   saveSettings as saveSettingsToStorage,
   saveUser as saveUserToStorage,
-+ clearCurrentUser,
 } from "./storage";
-
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -129,29 +137,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // ⭐ LOGIN: remember account + set current session + redirect home
+  // ⭐ LOGIN: remember account + set current session (no redirect)
   const login = (u: User) => {
     // remember this account on this device
-    saveUserToStorage(u);     // goes into fitlog_users
+    saveUserToStorage(u); // goes into fitlog_users
 
     // set as current session
     setUser(u);
-    setCurrentUser(u);        // goes into fitlog_current_user
+    setCurrentUser(u); // goes into fitlog_current_user
 
     // load per-user state
     loadSettings(u);
     loadWorkouts(u);
-
-    // redirect to home
-    window.location.href = "/";
   };
 
-  // ⭐ LOGOUT: only clear current session, keep remembered accounts
-   const logout = () => {
+  // ⭐ LOGOUT: clear current session (no redirect)
+  const logout = () => {
+    // Clear React state
     setUser(null);
     setWorkouts([]);
     setSettings(null);
-    clearCurrentUser();   // 🔹 completely forget who was logged in
+
+    // Clear the current user from localStorage directly
+    try {
+      localStorage.removeItem("fitlog_current_user");
+    } catch (err) {
+      console.error("Failed to clear current user from storage", err);
+    }
   };
 
   const refreshWorkouts = () => {
@@ -172,7 +184,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setWorkouts((prev) => [saved, ...prev]);
         saveWorkoutToStorage(saved);
       } catch (err) {
-        console.error("Failed to add workout via API, saving locally:", err);
+        console.error(
+          "Failed to add workout via API, saving locally:",
+          err
+        );
         saveWorkoutToStorage(workoutWithUser);
         setWorkouts((prev) => [workoutWithUser, ...prev]);
       }
@@ -192,9 +207,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         saveWorkoutToStorage(saved);
       } catch (err) {
-        console.error("Failed to update workout via API, updating locally:", err);
+        console.error(
+          "Failed to update workout via API, updating locally:",
+          err
+        );
         setWorkouts((prev) =>
-          prev.map((w) => (w.id === workoutWithUser.id ? workoutWithUser : w))
+          prev.map((w) =>
+            w.id === workoutWithUser.id ? workoutWithUser : w
+          )
         );
         saveWorkoutToStorage(workoutWithUser);
       }
@@ -208,7 +228,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await deleteWorkoutInApi(id);
       } catch (err) {
-        console.error("Failed to delete workout via API, deleting locally:", err);
+        console.error(
+          "Failed to delete workout via API, deleting locally:",
+          err
+        );
       } finally {
         deleteWorkoutFromStorage(id);
         setWorkouts((prev) => prev.filter((w) => w.id !== id));
@@ -241,7 +264,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshWorkouts,
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  );
 }
 
 export function useApp() {
