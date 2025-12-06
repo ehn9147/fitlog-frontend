@@ -12,8 +12,9 @@ import {
 import { DailyTipDialog } from "./DailyTipDialog";
 import { Dumbbell } from "lucide-react";
 import { useApp } from "../lib/context";
-import { getUserByEmail } from "../lib/storage";
+import { getUserByEmail, saveUser as saveUserToStorage } from "../lib/storage";
 import { User } from "../types";
+import { toast } from "sonner";
 
 export function LoginScreen() {
   const { login } = useApp();
@@ -23,37 +24,77 @@ export function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
 
-  const handleLogin = () => {
-    if (!email || !password) return;
+  const isValidEmail = (value: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(value.toLowerCase());
+  };
+
+  const isValidName = (value: string) => {
+    const trimmed = value.trim();
+    return trimmed.length >= 2 && /^[A-Za-z ]+$/.test(trimmed);
+  };
+
+  const isStrongPassword = (value: string) => {
+    if (value.length < 8) return false;
+    const hasLetter = /[A-Za-z]/.test(value);
+    const hasDigit = /\d/.test(value);
+    return hasLetter && hasDigit;
+  };
+
+  const handleSubmit = () => {
+    if (!email || !password || (isSignUp && !name)) {
+      toast.error("Please fill out all required fields.");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
 
     if (isSignUp) {
-      if (!name) return;
+      if (!isValidName(name)) {
+        toast.error(
+          "Name should be at least 2 letters and contain only letters and spaces."
+        );
+        return;
+      }
+
+      if (!isStrongPassword(password)) {
+        toast.error(
+          "Password must be at least 8 characters and include a letter and a number."
+        );
+        return;
+      }
+
+      const existing = getUserByEmail(email);
+      if (existing) {
+        toast.error("An account with this email already exists. Please sign in.");
+        return;
+      }
 
       const newUser: User = {
         id: Date.now().toString(),
-        name,
+        name: name.trim(),
         email,
         weeklyGoal: 4,
         createdAt: new Date().toISOString(),
       };
 
-      // login() saves user + sets current session + redirects
+      saveUserToStorage(newUser);
       login(newUser);
+      toast.success("Account created successfully. Welcome to FitLog!");
     } else {
-      let existing = getUserByEmail(email);
+      const existing = getUserByEmail(email);
 
       if (!existing) {
-        // Create demo user if not found
-        existing = {
-          id: Date.now().toString(),
-          name: email.split("@")[0],
-          email,
-          weeklyGoal: 4,
-          createdAt: new Date().toISOString(),
-        };
+        toast.error("No account found with that email. Please sign up first.");
+        return;
       }
 
+      // Placeholder password check – real apps must compare hashed passwords.
       login(existing);
+      toast.success("Signed in successfully.");
     }
   };
 
@@ -70,7 +111,9 @@ export function LoginScreen() {
             FitLog
           </CardTitle>
           <CardDescription className="font-mono">
-            Track your fitness journey
+            {isSignUp
+              ? "Create a secure account to track your workouts."
+              : "Sign in to continue your fitness journey."}
           </CardDescription>
         </CardHeader>
 
@@ -117,10 +160,15 @@ export function LoginScreen() {
               onChange={(e) => setPassword(e.target.value)}
               className="wireframe-input"
             />
+            {isSignUp && (
+              <p className="text-xs text-muted-foreground font-mono">
+                At least 8 characters, including a letter and a number.
+              </p>
+            )}
           </div>
 
           <Button
-            onClick={handleLogin}
+            onClick={handleSubmit}
             className="w-full wireframe-button"
             disabled={!email || !password || (isSignUp && !name)}
           >
@@ -134,6 +182,7 @@ export function LoginScreen() {
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setName("");
+                setPassword("");
               }}
             >
               {isSignUp

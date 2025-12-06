@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { useApp } from '../lib/context';
-import { toast } from 'sonner@2.0.3';
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { useApp } from "../lib/context";
+import { toast } from "sonner";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -13,10 +13,10 @@ interface EditProfileDialogProps {
 
 export function EditProfileDialog({ open, onClose }: EditProfileDialogProps) {
   const { user, updateUser } = useApp();
-  const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
   const [weeklyGoal, setWeeklyGoal] = useState(
-    user?.weeklyGoal.toString() || '4'
+    user?.weeklyGoal.toString() || "4"
   );
 
   useEffect(() => {
@@ -37,15 +37,13 @@ export function EditProfileDialog({ open, onClose }: EditProfileDialogProps) {
       weeklyGoal: parseInt(weeklyGoal) || 4,
     });
 
-    toast.success('Profile updated successfully');
+    toast.success("Profile updated successfully");
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      {/* unified dialog shell */}
       <DialogContent className="sm:max-w-md bg-white rounded-none border-[6px] border-black py-8">
-        {/* inner padding so content never touches the border */}
         <div className="px-12">
           <DialogHeader>
             <DialogTitle className="uppercase tracking-wide font-mono">
@@ -68,15 +66,18 @@ export function EditProfileDialog({ open, onClose }: EditProfileDialogProps) {
 
             <div className="space-y-2">
               <Label htmlFor="email" className="uppercase tracking-wide">
-                Email
+                Email (login)
               </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="wireframe-input"
+                readOnly
+                className="wireframe-input opacity-70 cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground font-mono">
+                Email is used as your login. To change it, create a new account.
+              </p>
             </div>
 
             <div className="space-y-2">

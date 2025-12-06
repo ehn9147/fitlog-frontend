@@ -9,15 +9,23 @@ import { Workout } from "../types";
 
 type TabKey = "all" | "strength" | "cardio" | "flexibility";
 
+function parseDateSafe(dateString: string) {
+  if (!dateString) return null;
+  const normalized = dateString.includes("T")
+    ? dateString
+    : `${dateString}T00:00:00`;
+  const date = new Date(normalized);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 export function HistoryScreen() {
   const { workouts } = useApp();
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
 
   const formatRelativeDate = (dateString: string) => {
-    if (!dateString) return "Unknown date";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
+    const date = parseDateSafe(dateString);
+    if (!date) return dateString || "Unknown date";
 
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
@@ -137,7 +145,6 @@ export function HistoryScreen() {
       );
     }
 
-    // flexibility
     return flexibilityWorkouts.length > 0 ? (
       <div className="space-y-4">{flexibilityWorkouts.map(renderWorkoutCard)}</div>
     ) : (
@@ -179,7 +186,6 @@ export function HistoryScreen() {
         </Card>
       ) : (
         <>
-          {/* Custom tab row – using DIVs so global button styles can't break layout */}
           <div
             style={{
               display: "flex",

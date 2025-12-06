@@ -17,7 +17,6 @@ interface StartWorkoutDialogProps {
   onClose: () => void;
 }
 
-// suggestion helper
 function getSuggestion(type: string) {
   switch (type) {
     case "Strength":
@@ -59,10 +58,13 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
   const handleClose = () => onClose();
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      {/* Outer shell: border + vertical padding */}
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg bg-white rounded-none border-[6px] border-black py-8">
-        {/* Inner wrapper: EXTRA left/right padding so content never touches edges */}
         <div className="px-10">
           <DialogHeader>
             <DialogTitle className="uppercase tracking-wide font-mono">
@@ -71,7 +73,6 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            {/* Type */}
             <div className="space-y-2">
               <Label className="uppercase tracking-wide">Type</Label>
               <Select value={type} onValueChange={setType}>
@@ -87,7 +88,6 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
               </Select>
             </div>
 
-            {/* Date */}
             <div className="space-y-2">
               <Label className="uppercase tracking-wide">Date</Label>
               <Input
@@ -98,7 +98,6 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
               />
             </div>
 
-            {/* Suggested Plan */}
             <Card className="wireframe-card">
               <CardContent className="pt-4 space-y-2">
                 <div className="flex justify-between items-center">
@@ -115,7 +114,6 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
               </CardContent>
             </Card>
 
-            {/* Close button */}
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"

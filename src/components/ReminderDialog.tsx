@@ -14,7 +14,7 @@ import { Separator } from "./ui/separator";
 type ReminderScheduleDialogProps = {
   open: boolean;
   onClose: () => void;
-  currentTime: string;          // "18:00"
+  currentTime: string; // "18:00"
   onSave: (time: string) => void; // "HH:MM" 24h
 };
 
@@ -26,6 +26,8 @@ const PRESET_TIMES = [
   { label: "6:00 PM", value: "18:00" },
   { label: "8:00 PM", value: "20:00" },
 ];
+
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export function ReminderScheduleDialog({
   open,
@@ -42,12 +44,14 @@ export function ReminderScheduleDialog({
   }, [open, currentTime]);
 
   const handleSave = () => {
-    if (!time) return;
+    if (!time || !TIME_REGEX.test(time)) return;
     onSave(time);
   };
 
+  const isValid = !!time && TIME_REGEX.test(time);
+
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-md wireframe-card">
         <DialogHeader>
           <DialogTitle className="uppercase tracking-wide font-mono">
@@ -59,7 +63,6 @@ export function ReminderScheduleDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Quick presets */}
           <div className="space-y-2">
             <Label className="uppercase tracking-wide text-xs font-mono">
               Quick times
@@ -82,7 +85,6 @@ export function ReminderScheduleDialog({
 
           <Separator className="wireframe-separator" />
 
-          {/* Exact time input */}
           <div className="space-y-2">
             <Label className="uppercase tracking-wide text-xs font-mono">
               Custom time
@@ -113,6 +115,7 @@ export function ReminderScheduleDialog({
             type="button"
             className="wireframe-button"
             onClick={handleSave}
+            disabled={!isValid}
           >
             Save reminder
           </Button>
@@ -121,3 +124,4 @@ export function ReminderScheduleDialog({
     </Dialog>
   );
 }
+

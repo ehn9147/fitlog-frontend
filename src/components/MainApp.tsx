@@ -1,15 +1,30 @@
 // src/components/MainApp.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HomeScreen } from "./HomeScreen";
 import { HistoryScreen } from "./HistoryScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { Button } from "./ui/button";
 import { Home, History, Settings } from "lucide-react";
 
+type TabKey = "home" | "history" | "settings";
+
+const STORAGE_KEY = "fitlog-active-tab";
+
 export function MainApp() {
-  const [activeTab, setActiveTab] = useState<"home" | "history" | "settings">(
-    "home"
-  );
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
+    if (typeof window === "undefined") return "home";
+    const stored = window.localStorage.getItem(STORAGE_KEY) as TabKey | null;
+    if (stored === "home" || stored === "history" || stored === "settings") {
+      return stored;
+    }
+    return "home";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(STORAGE_KEY, activeTab);
+    }
+  }, [activeTab]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -26,10 +41,8 @@ export function MainApp() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Main Content */}
       <div className="flex-1 overflow-auto p-4 pb-20">{renderContent()}</div>
 
-      {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border wireframe-nav">
         <div className="flex justify-around items-center py-2 px-4">
           <Button

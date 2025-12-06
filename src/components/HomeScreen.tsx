@@ -9,13 +9,21 @@ import { WorkoutDetailsDialog } from "./WorkoutDetailsDialog";
 import { Workout } from "../types";
 import { StartWorkoutDialog } from "./StartWorkoutDialog";
 
+function parseDateSafe(dateString: string) {
+  if (!dateString) return null;
+  const normalized = dateString.includes("T")
+    ? dateString
+    : `${dateString}T00:00:00`;
+  const date = new Date(normalized);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 export function HomeScreen() {
   const { user, workouts } = useApp();
   const [showStartWorkout, setShowStartWorkout] = useState(false);
   const [showLogPrevious, setShowLogPrevious] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
 
-  // Safely get week start (Sunday)
   const getWeekStart = () => {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Sunday
@@ -29,21 +37,20 @@ export function HomeScreen() {
 
   const thisWeekWorkouts = workouts.filter((w) => {
     if (!w.date) return false;
-    const workoutDate = new Date(w.date);
-    if (isNaN(workoutDate.getTime())) return false;
+    const workoutDate = parseDateSafe(w.date);
+    if (!workoutDate) return false;
     return workoutDate >= weekStart;
   });
 
-  const weeklyGoal = user?.weeklyGoal && user.weeklyGoal > 0 ? user.weeklyGoal : 4;
+  const weeklyGoal =
+    user?.weeklyGoal && user.weeklyGoal > 0 ? user.weeklyGoal : 4;
   const weeklyProgress = (thisWeekWorkouts.length / weeklyGoal) * 100;
 
-  // Assume workouts array is already sorted newest → oldest in context.
   const recentWorkouts = workouts.slice(0, 2);
 
   const formatRelativeDate = (dateString: string) => {
-    if (!dateString) return "Unknown date";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString; // fall back to raw
+    const date = parseDateSafe(dateString);
+    if (!date) return dateString || "Unknown date";
 
     const now = new Date();
     const diffTime = now.getTime() - date.getTime();
@@ -58,13 +65,11 @@ export function HomeScreen() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
       <div className="text-center space-y-2">
         <h1 className="text-2xl">Welcome back, {user?.name}!</h1>
         <p className="text-muted-foreground">Ready for today's workout?</p>
       </div>
 
-      {/* Weekly Goal Progress */}
       <Card className="wireframe-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 uppercase tracking-wide">
@@ -90,7 +95,6 @@ export function HomeScreen() {
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
       <Card className="wireframe-card">
         <CardHeader>
           <CardTitle className="uppercase tracking-wide">Quick Start</CardTitle>
@@ -117,10 +121,11 @@ export function HomeScreen() {
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
       <Card className="wireframe-card">
         <CardHeader>
-          <CardTitle className="uppercase tracking-wide">Recent Workouts</CardTitle>
+          <CardTitle className="uppercase tracking-wide">
+            Recent Workouts
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {recentWorkouts.length === 0 ? (
@@ -168,19 +173,16 @@ export function HomeScreen() {
         </CardContent>
       </Card>
 
-      {/* Start New Workout – suggestion only */}
       <StartWorkoutDialog
         open={showStartWorkout}
         onClose={() => setShowStartWorkout(false)}
       />
 
-      {/* Log Previous Workout – full logging dialog */}
       <WorkoutDialog
         open={showLogPrevious}
         onClose={() => setShowLogPrevious(false)}
       />
 
-      {/* Details dialog for recent workouts */}
       <WorkoutDetailsDialog
         open={!!selectedWorkout}
         onClose={() => setSelectedWorkout(null)}
