@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../lib/context";
 import { EditProfileDialog } from "./EditProfileDialog";
-import { ReminderScheduleDialog } from "./ReminderScheduleDialog";
+import { ReminderScheduleDialog } from "./ReminderDialog";
 import { toast } from "sonner";
 
 export function SettingsScreen() {
