@@ -23,6 +23,15 @@ interface WorkoutDialogProps {
   workout?: Workout | null;
 }
 
+// ✅ Local “today” helper – avoids UTC / next-day bug
+const getTodayLocal = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`; // YYYY-MM-DD in local time
+};
+
 const createEmptyExercise = (): Exercise => ({
   id:
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -39,9 +48,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
 
   const [name, setName] = useState(workout?.name || "");
   const [type, setType] = useState<string>(workout?.type || "Strength");
-  const [date, setDate] = useState(
-    workout?.date || new Date().toISOString().split("T")[0]
-  );
+  const [date, setDate] = useState(workout?.date || getTodayLocal());
   const [duration, setDuration] = useState(
     workout?.duration !== undefined ? workout.duration.toString() : ""
   );
@@ -69,7 +76,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
     } else if (open) {
       setName("");
       setType("Strength");
-      setDate(new Date().toISOString().split("T")[0]);
+      setDate(getTodayLocal());
       setDuration("");
       setNotes("");
       setExercises([createEmptyExercise()]);
@@ -97,7 +104,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
   const handleClose = () => {
     setName("");
     setType("Strength");
-    setDate(new Date().toISOString().split("T")[0]);
+    setDate(getTodayLocal());
     setDuration("");
     setNotes("");
     setExercises([createEmptyExercise()]);
@@ -110,7 +117,6 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
       return;
     }
 
-    
     const baseData = {
       userId: user.id,
       name: name.trim(),
@@ -120,7 +126,6 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
       exercises: exercises
         .filter((e) => e.name.trim() !== "")
         .map((e) => ({
-          
           name: e.name,
           sets: e.sets,
           reps: e.reps,
@@ -130,7 +135,6 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
     };
 
     if (workout && workout.id) {
-      
       updateWorkout({
         ...workout,
         ...baseData,
