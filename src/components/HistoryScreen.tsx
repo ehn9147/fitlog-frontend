@@ -1,13 +1,29 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
 import { useApp } from "../lib/context";
 import { WorkoutDetailsDialog } from "./WorkoutDetailsDialog";
 import { Workout } from "../types";
+import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { ProgressReportDialog } from "./ProgressReportDialog"; // 👈 NEW
 
 type TabKey = "all" | "strength" | "cardio" | "flexibility";
+type TimeFilter = "all" | "day" | "week" | "month" | "year";
 
 function parseDateSafe(dateString: string) {
   if (!dateString) return null;
@@ -18,10 +34,40 @@ function parseDateSafe(dateString: string) {
   return isNaN(date.getTime()) ? null : date;
 }
 
+function passesTimeFilter(workout: Workout, filter: TimeFilter) {
+  if (filter === "all") return true;
+
+  const date = parseDateSafe(workout.date);
+  if (!date) return false;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  switch (filter) {
+    case "day":
+      return diffDays <= 1;
+    case "week":
+      return diffDays <= 7;
+    case "month":
+      return diffDays <= 30;
+    case "year":
+      return diffDays <= 365;
+    default:
+      return true;
+  }
+}
+
 export function HistoryScreen() {
   const { workouts } = useApp();
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+  const [showReport, setShowReport] = useState(false); // 👈 NEW
+
+  const filteredWorkouts = workouts.filter((w) =>
+    passesTimeFilter(w, timeFilter)
+  );
 
   const formatRelativeDate = (dateString: string) => {
     const date = parseDateSafe(dateString);
@@ -73,7 +119,8 @@ export function HistoryScreen() {
                 </span>
                 {mainExercise && (
                   <span>
-                    {mainExercise.sets} × {mainExercise.reps} {mainExercise.name}
+                    {mainExercise.sets} × {mainExercise.reps}{" "}
+                    {mainExercise.name}
                   </span>
                 )}
               </CardDescription>
@@ -108,23 +155,41 @@ export function HistoryScreen() {
     );
   };
 
-  const strengthWorkouts = workouts.filter((w) => w.type === "Strength");
-  const cardioWorkouts = workouts.filter((w) => w.type === "Cardio");
-  const flexibilityWorkouts = workouts.filter((w) => w.type === "Flexibility");
+  const strengthWorkouts = filteredWorkouts.filter(
+    (w) => w.type === "Strength"
+  );
+  const cardioWorkouts = filteredWorkouts.filter((w) => w.type === "Cardio");
+  const flexibilityWorkouts = filteredWorkouts.filter(
+    (w) => w.type === "Flexibility"
+  );
 
   const renderActiveTabContent = () => {
     if (activeTab === "all") {
-      return <div className="space-y-4">{workouts.map(renderWorkoutCard)}</div>;
-    }
-
-    if (activeTab === "strength") {
-      return strengthWorkouts.length > 0 ? (
-        <div className="space-y-4">{strengthWorkouts.map(renderWorkoutCard)}</div>
+      return filteredWorkouts.length > 0 ? (
+        <div className="space-y-4">
+          {filteredWorkouts.map(renderWorkoutCard)}
+        </div>
       ) : (
         <Card className="wireframe-card">
           <CardContent className="pt-6 text-center py-12">
             <p className="text-muted-foreground font-mono">
-              No strength workouts logged
+              No workouts in this time range
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (activeTab === "strength") {
+      return strengthWorkouts.length > 0 ? (
+        <div className="space-y-4">
+          {strengthWorkouts.map(renderWorkoutCard)}
+        </div>
+      ) : (
+        <Card className="wireframe-card">
+          <CardContent className="pt-6 text-center py-12">
+            <p className="text-muted-foreground font-mono">
+              No strength workouts in this time range
             </p>
           </CardContent>
         </Card>
@@ -138,7 +203,7 @@ export function HistoryScreen() {
         <Card className="wireframe-card">
           <CardContent className="pt-6 text-center py-12">
             <p className="text-muted-foreground font-mono">
-              No cardio workouts logged
+              No cardio workouts in this time range
             </p>
           </CardContent>
         </Card>
@@ -146,12 +211,14 @@ export function HistoryScreen() {
     }
 
     return flexibilityWorkouts.length > 0 ? (
-      <div className="space-y-4">{flexibilityWorkouts.map(renderWorkoutCard)}</div>
+      <div className="space-y-4">
+        {flexibilityWorkouts.map(renderWorkoutCard)}
+      </div>
     ) : (
       <Card className="wireframe-card">
         <CardContent className="pt-6 text-center py-12">
           <p className="text-muted-foreground font-mono">
-            No flexibility workouts logged
+            No flexibility workouts in this time range
           </p>
         </CardContent>
       </Card>
@@ -167,10 +234,43 @@ export function HistoryScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4 flex-wrap">
         <h1 className="text-2xl uppercase tracking-wider font-mono">
           Workout History
         </h1>
+
+        <div className="flex items-center gap-2">
+          <Label className="uppercase tracking-wide text-xs font-mono">
+            Time range
+          </Label>
+          <Select
+            value={timeFilter}
+            onValueChange={(value) => setTimeFilter(value as TimeFilter)}
+          >
+            <SelectTrigger className="wireframe-input min-w-[9rem]">
+              <SelectValue placeholder="All time" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="day">Last 24 hours</SelectItem>
+              <SelectItem value="week">Last 7 days</SelectItem>
+              <SelectItem value="month">Last 30 days</SelectItem>
+              <SelectItem value="year">Last 12 months</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 👇 New button to open progress report */}
+          <Button
+            type="button"
+            variant="outline"
+            className="wireframe-button ml-2"
+            data-variant="outline"
+            onClick={() => setShowReport(true)}
+          >
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Progress Report
+          </Button>
+        </div>
       </div>
 
       {workouts.length === 0 ? (
@@ -231,6 +331,13 @@ export function HistoryScreen() {
         onClose={() => setSelectedWorkout(null)}
         workout={selectedWorkout}
       />
+
+      {/* 📊 Progress report dialog */}
+      <ProgressReportDialog
+        open={showReport}
+        onClose={() => setShowReport(false)}
+      />
     </div>
   );
 }
+

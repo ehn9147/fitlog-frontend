@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -11,6 +17,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Card, CardContent } from "./ui/card";
+import { Calendar, Clock, Dumbbell } from "lucide-react";
 
 interface StartWorkoutDialogProps {
   open: boolean;
@@ -57,6 +64,17 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
 
   const handleClose = () => onClose();
 
+  const longDate = (() => {
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return date;
+    return d.toLocaleDateString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  })();
+
   return (
     <Dialog
       open={open}
@@ -64,17 +82,25 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
         if (!isOpen) handleClose();
       }}
     >
-      <DialogContent className="sm:max-w-lg bg-white rounded-none border-[6px] border-black py-8">
-        <div className="px-10">
-          <DialogHeader>
-            <DialogTitle className="uppercase tracking-wide font-mono">
+      <DialogContent className="sm:max-w-lg bg-white rounded-none border-[6px] border-black wireframe-dialog">
+        
+        <div className="px-8 py-8 space-y-6">
+          {/* HEADER */}
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="uppercase tracking-wide font-mono text-xl">
               Start New Workout
             </DialogTitle>
+            <DialogDescription className="font-mono text-sm text-muted-foreground">
+              Get a quick suggested plan without logging a workout.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
+          {/* TYPE + DATE ROW */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="uppercase tracking-wide">Type</Label>
+              <Label className="uppercase tracking-wide text-xs font-mono">
+                Type
+              </Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger className="wireframe-input">
                   <SelectValue />
@@ -89,43 +115,57 @@ export function StartWorkoutDialog({ open, onClose }: StartWorkoutDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="uppercase tracking-wide">Date</Label>
+              <Label className="uppercase tracking-wide text-xs font-mono">
+                Date
+              </Label>
               <Input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="wireframe-input"
               />
+              <p className="text-[11px] text-muted-foreground font-mono">
+                {longDate}
+              </p>
             </div>
+          </div>
 
-            <Card className="wireframe-card">
-              <CardContent className="pt-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="uppercase tracking-wide text-sm font-mono">
+          {/* SUGGESTED PLAN CARD */}
+          <Card className="wireframe-card">
+            <CardContent className="pt-4 pb-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center">
+                    <Dumbbell className="w-4 h-4" />
+                  </div>
+                  <span className="uppercase tracking-wide text-xs font-mono">
                     Suggested Plan
                   </span>
-                  <span className="font-mono text-sm">
-                    ~{suggestion.duration} min
-                  </span>
                 </div>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {suggestion.text}
-                </p>
-              </CardContent>
-            </Card>
+                <span className="flex items-center gap-1 font-mono text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  ~{suggestion.duration} min
+                </span>
+              </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                className="flex-1 wireframe-button"
-                data-variant="outline"
-              >
-                Close
-              </Button>
-            </div>
+              <p className="text-sm text-muted-foreground font-mono leading-relaxed">
+                {suggestion.text}
+              </p>
+            </CardContent>
+          </Card>
 
-            <p className="text-xs text-muted-foreground font-mono text-center">
+          {/* FOOTER BUTTON + NOTE */}
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="w-full wireframe-button"
+              data-variant="outline"
+            >
+              Close
+            </Button>
+
+            <p className="text-[11px] text-muted-foreground font-mono text-center">
               This quick start does <span className="font-semibold">not</span>{" "}
               log a workout or update your progress.
             </p>

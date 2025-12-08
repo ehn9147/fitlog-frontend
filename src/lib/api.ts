@@ -1,13 +1,12 @@
 import type { Workout } from "../types";
 
-// 👇 Base URL comes from .env (VITE_API_URL)
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 const API_BASE = `${API_BASE_URL}/api/workouts`;
 
-// Payload for creating/updating workouts (no id in body for create)
 export type NewWorkoutPayload = Omit<Workout, "id">;
 
-// GET /api/workouts or /api/workouts?userId=...
+// GET /api/workouts 
 export async function fetchWorkouts(userId?: string): Promise<Workout[]> {
   const url = userId
     ? `${API_BASE}?userId=${encodeURIComponent(userId)}`

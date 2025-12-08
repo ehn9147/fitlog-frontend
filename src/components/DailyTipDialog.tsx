@@ -1,64 +1,101 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 import { Button } from "./ui/button";
-import { Lightbulb, Zap, Target, Trophy } from "lucide-react";
+import { Card, CardContent } from "./ui/card";
+import { Lightbulb } from "lucide-react";
 
 interface DailyTipDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
-const tips = [
-  {
-    icon: <Lightbulb className="w-8 h-8 text-yellow-500" />,
-    title: "Today's Motivation",
-    message: "Every rep counts! Focus on form over speed for better results.",
-  },
-  {
-    icon: <Zap className="w-8 h-8 text-blue-500" />,
-    title: "Energy Boost",
-    message: "Remember to hydrate! Drink water before, during, and after your workout.",
-  },
-  {
-    icon: <Target className="w-8 h-8 text-green-500" />,
-    title: "Focus Point",
-    message: "Progressive overload is key - gradually increase weight, reps, or time.",
-  },
-  {
-    icon: <Trophy className="w-8 h-8 text-purple-500" />,
-    title: "Champion Mindset",
-    message: "Consistency beats perfection. Show up even when you don't feel like it!",
-  },
+const DAILY_TIPS: string[] = [
+  "Done is better than perfect. A short workout you actually do beats the perfect one you skip.",
+  "Schedule your workouts like appointments. If it’s on the calendar, it’s real.",
+  "Start your workout with the exercise you dread the most. Get the hardest thing done first.",
+  "Progress over perfection: add 1 more rep, 1 more set, or 1 more minute this week.",
+  "You don’t need motivation, you need a routine. Show up first—motivation usually follows.",
+  "Track something simple: workouts per week. Hitting that number matters more than any single session.",
+  "Bad workout? Good. You just proved you can still show up on a bad day.",
+  "Keep your warm-up non-negotiable. It’s the bridge between ‘I don’t feel like it’ and ‘I’m in it’.",
+  "Sleep and hydration are secret performance boosts. Protect both if you want better workouts.",
+  "If you miss a day, don’t miss two. The second miss is where habits really break.",
+  "Pair your workout with a ‘treat’—podcast, music, or show you only enjoy while training.",
+  "Write tomorrow’s workout at the end of today’s session. Future you will thank you.",
+  "Small wins stack: 10 minutes now is better than waiting for the perfect 60-minute block.",
+  "Strength comes from consistency, not intensity. Be the person who keeps showing up.",
+  "Your only real competition is yesterday’s you. Aim to be 1% better, not perfect."
 ];
 
 export function DailyTipDialog({ open, onClose }: DailyTipDialogProps) {
-  const today = new Date();
-  const dayOfYear = Math.floor(
-    (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
-  const todaysTip = tips[dayOfYear % tips.length];
+  const [tip, setTip] = useState<string>("");
+
+  // Pick a random tip each time the dialog opens
+  useEffect(() => {
+    if (open && DAILY_TIPS.length > 0) {
+      const index = Math.floor(Math.random() * DAILY_TIPS.length);
+      setTip(DAILY_TIPS[index]);
+    }
+  }, [open]);
+
+  const handleClose = () => onClose();
 
   return (
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen) onClose();
+        if (!isOpen) handleClose();
       }}
     >
-      <DialogContent className="sm:max-w-md wireframe-dialog">
-        <DialogHeader className="text-center">
-          <div className="flex justify-center mb-4">{todaysTip.icon}</div>
-          <DialogTitle className="text-xl uppercase tracking-wide font-mono">
-            {todaysTip.title}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="text-center space-y-6">
-          <p className="text-muted-foreground font-mono">
-            {todaysTip.message}
-          </p>
-          <Button onClick={onClose} className="w-full wireframe-button">
-            Let's Get Started!
-          </Button>
+      <DialogContent className="sm:max-w-md bg-white rounded-none border-[6px] border-black wireframe-dialog">
+        {/* Inner padding wrapper */}
+        <div className="px-8 py-8 space-y-6">
+          {/* HEADER */}
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="uppercase tracking-wide font-mono text-xl">
+              Daily Tip
+            </DialogTitle>
+            <DialogDescription className="font-mono text-sm text-muted-foreground">
+              A quick bit of motivation or advice to keep you consistent.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* TIP CARD */}
+          <Card className="wireframe-card">
+            <CardContent className="pt-4 pb-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <Lightbulb className="w-4 h-4" />
+                </div>
+                <span className="uppercase tracking-wide text-xs font-mono">
+                  Today&apos;s Daily Tip
+                </span>
+              </div>
+
+              <p className="text-sm text-muted-foreground font-mono leading-relaxed">
+                {tip || "Loading your tip for today..."}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* BUTTON */}
+          <div className="flex justify-start pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="wireframe-button"
+              data-variant="outline"
+            >
+              Got it
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

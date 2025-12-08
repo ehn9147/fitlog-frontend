@@ -1,4 +1,4 @@
-// src/lib/context.tsx
+
 import {
   createContext,
   useContext,
@@ -11,15 +11,17 @@ import { User, Workout, UserSettings } from "../types";
 import {
   getCurrentUser,
   setCurrentUser,
-  getUserWorkouts,
-  saveWorkout as saveWorkoutToStorage,
-  deleteWorkout as deleteWorkoutFromStorage,
   getSettings,
   saveSettings as saveSettingsToStorage,
   saveUser as saveUserToStorage,
 } from "./storage";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import {
+  fetchWorkouts as fetchWorkoutsFromApi,
+  createWorkout as createWorkoutInApi,
+  updateWorkoutApi as updateWorkoutInApi,
+  deleteWorkoutApi as deleteWorkoutInApi,
+} from "./api";
 
 interface AppContextType {
   user: User | null;
@@ -36,59 +38,6 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-// ---- API helpers ----
-
-async function fetchWorkoutsFromApi(userId: string): Promise<Workout[]> {
-  const res = await fetch(
-    `${API_BASE_URL}/api/workouts?userId=${encodeURIComponent(userId)}`
-  );
-  if (!res.ok) {
-    throw new Error(`Failed to fetch workouts: ${res.status}`);
-  }
-  return res.json();
-}
-
-async function createWorkoutInApi(workout: Workout): Promise<Workout> {
-  const res = await fetch(`${API_BASE_URL}/api/workouts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(workout),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to create workout: ${res.status}`);
-  }
-  return res.json();
-}
-
-async function updateWorkoutInApi(workout: Workout): Promise<Workout> {
-  const res = await fetch(
-    `${API_BASE_URL}/api/workouts/${encodeURIComponent(workout.id)}`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(workout),
-    }
-  );
-  if (!res.ok) {
-    throw new Error(`Failed to update workout: ${res.status}`);
-  }
-  return res.json();
-}
-
-async function deleteWorkoutInApi(id: string): Promise<void> {
-  const res = await fetch(
-    `${API_BASE_URL}/api/workouts/${encodeURIComponent(id)}`,
-    {
-      method: "DELETE",
-    }
-  );
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`Failed to delete workout: ${res.status}`);
-  }
-}
-
-// ---- Context implementation ----
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -131,13 +80,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const apiWorkouts = await fetchWorkoutsFromApi(u.id);
       setWorkouts(apiWorkouts);
     } catch (err) {
-      console.warn("API workouts failed, using local storage instead:", err);
-      const localWorkouts = getUserWorkouts(u.id) || [];
-      setWorkouts(localWorkouts);
+      console.error("Failed to load workouts from API:", err);
+      setWorkouts([]); 
     }
   };
 
-  // ⭐ LOGIN: remember account + set current session (no redirect)
+  //  LOGIN
   const login = (u: User) => {
     saveUserToStorage(u);
     setUser(u);
@@ -146,7 +94,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadWorkouts(u);
   };
 
-  // ⭐ LOGOUT: clear current session (no redirect)
+  //  LOGOUT
   const logout = () => {
     setUser(null);
     setWorkouts([]);
@@ -154,8 +102,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       localStorage.removeItem("fitlog_current_user");
+      localStorage.removeItem("fitlog-active-tab");
     } catch (err) {
-      console.error("Failed to clear current user from storage", err);
+      console.error("Failed to clear local storage on logout", err);
     }
   };
 
@@ -174,35 +123,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const saved = await createWorkoutInApi(workoutWithUser);
         setWorkouts((prev) => [saved, ...prev]);
-        saveWorkoutToStorage(saved);
       } catch (err) {
-        console.error("Failed to add workout via API, saving locally:", err);
-        saveWorkoutToStorage(workoutWithUser);
-        setWorkouts((prev) => [workoutWithUser, ...prev]);
+        console.error("Failed to add workout via API:", err);
       }
     })();
   };
 
   const updateWorkout = (workout: Workout) => {
     if (!user) return;
+    if (!workout.id) {
+      console.error("Workout id is required for update");
+      return;
+    }
 
     const workoutWithUser: Workout = { ...workout, userId: user.id };
 
     (async () => {
       try {
-        const saved = await updateWorkoutInApi(workoutWithUser);
+        const saved = await updateWorkoutInApi(workoutWithUser.id, workoutWithUser);
         setWorkouts((prev) =>
           prev.map((w) => (w.id === saved.id ? saved : w))
         );
-        saveWorkoutToStorage(saved);
       } catch (err) {
-        console.error("Failed to update workout via API, updating locally:", err);
-        setWorkouts((prev) =>
-          prev.map((w) =>
-            w.id === workoutWithUser.id ? workoutWithUser : w
-          )
-        );
-        saveWorkoutToStorage(workoutWithUser);
+        console.error("Failed to update workout via API:", err);
       }
     })();
   };
@@ -214,9 +157,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await deleteWorkoutInApi(id);
       } catch (err) {
-        console.error("Failed to delete workout via API, deleting locally:", err);
+        console.error("Failed to delete workout via API:", err);
       } finally {
-        deleteWorkoutFromStorage(id);
         setWorkouts((prev) => prev.filter((w) => w.id !== id));
       }
     })();

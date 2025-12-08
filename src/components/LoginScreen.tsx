@@ -52,6 +52,9 @@ export function LoginScreen() {
       return;
     }
 
+    // normalize email so user.id is stable
+    const normalizedEmail = email.trim().toLowerCase();
+
     if (isSignUp) {
       if (!isValidName(name)) {
         toast.error(
@@ -67,16 +70,17 @@ export function LoginScreen() {
         return;
       }
 
-      const existing = getUserByEmail(email);
+      const existing = getUserByEmail(normalizedEmail);
       if (existing) {
         toast.error("An account with this email already exists. Please sign in.");
         return;
       }
 
+      // ✅ use normalizedEmail as a STABLE id
       const newUser: User = {
-        id: Date.now().toString(),
+        id: normalizedEmail,
         name: name.trim(),
-        email,
+        email: normalizedEmail,
         weeklyGoal: 4,
         createdAt: new Date().toISOString(),
       };
@@ -85,14 +89,14 @@ export function LoginScreen() {
       login(newUser);
       toast.success("Account created successfully. Welcome to FitLog!");
     } else {
-      const existing = getUserByEmail(email);
+      const existing = getUserByEmail(normalizedEmail);
 
       if (!existing) {
         toast.error("No account found with that email. Please sign up first.");
         return;
       }
 
-      // Placeholder password check – real apps must compare hashed passwords.
+      // In a real app, you'd verify password here.
       login(existing);
       toast.success("Signed in successfully.");
     }

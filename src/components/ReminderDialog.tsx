@@ -2,32 +2,27 @@ import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Separator } from "./ui/separator";
+import { Clock } from "lucide-react";
+import { toast } from "sonner";
 
-type ReminderScheduleDialogProps = {
+interface ReminderScheduleDialogProps {
   open: boolean;
   onClose: () => void;
-  currentTime: string; // "18:00"
-  onSave: (time: string) => void; // "HH:MM" 24h
-};
+  currentTime: string; // "HH:MM"
+  onSave: (newTime: string) => void;
+}
 
-const PRESET_TIMES = [
-  { label: "6:00 AM", value: "06:00" },
-  { label: "7:00 AM", value: "07:00" },
-  { label: "8:00 AM", value: "08:00" },
-  { label: "12:00 PM", value: "12:00" },
-  { label: "6:00 PM", value: "18:00" },
-  { label: "8:00 PM", value: "20:00" },
-];
-
-const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+function isValidTime(value: string) {
+  
+  return /^\d{2}:\d{2}$/.test(value);
+}
 
 export function ReminderScheduleDialog({
   open,
@@ -43,85 +38,77 @@ export function ReminderScheduleDialog({
     }
   }, [open, currentTime]);
 
-  const handleSave = () => {
-    if (!time || !TIME_REGEX.test(time)) return;
+  const handleClose = () => {
+    onClose();
+  };
+
+  const handleSaveClick = () => {
+    if (!isValidTime(time)) {
+      toast.error("Please enter a valid time (HH:MM)");
+      return;
+    }
     onSave(time);
   };
 
-  const isValid = !!time && TIME_REGEX.test(time);
-
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md wireframe-card">
-        <DialogHeader>
-          <DialogTitle className="uppercase tracking-wide font-mono">
-            Workout Reminder
-          </DialogTitle>
-          <DialogDescription className="font-mono">
-            Choose what time you want FitLog to remind you to work out each day.
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) handleClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-md bg-white rounded-none border-[6px] border-black wireframe-dialog">
+        
+        <div className="px-8 py-8 space-y-6">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="uppercase tracking-wide font-mono text-xl">
+              Workout Reminder
+            </DialogTitle>
+            <DialogDescription className="font-mono text-sm text-muted-foreground">
+              Choose what time you’d like to get your daily workout reminder.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <Label className="uppercase tracking-wide text-xs font-mono">
-              Quick times
+          <div className="space-y-3">
+            <Label
+              htmlFor="reminder-time"
+              className="uppercase tracking-wide text-xs font-mono flex items-center gap-2"
+            >
+              <Clock className="w-4 h-4" />
+              Reminder time
             </Label>
-            <div className="grid grid-cols-3 gap-2">
-              {PRESET_TIMES.map((t) => (
-                <Button
-                  key={t.value}
-                  type="button"
-                  variant={time === t.value ? "default" : "outline"}
-                  className="wireframe-button font-mono text-xs"
-                  data-variant={time === t.value ? "default" : "outline"}
-                  onClick={() => setTime(t.value)}
-                >
-                  {t.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <Separator className="wireframe-separator" />
-
-          <div className="space-y-2">
-            <Label className="uppercase tracking-wide text-xs font-mono">
-              Custom time
-            </Label>
-            <input
+            <Input
+              id="reminder-time"
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="wireframe-input w-full border rounded-md px-3 py-2 font-mono text-sm"
+              className="wireframe-input"
             />
-            <p className="text-xs text-muted-foreground font-mono">
-              Daily reminder will be sent at this time.
+            <p className="text-[11px] text-muted-foreground font-mono">
+              Uses your device’s local time. Example: 18:00 = 6:00 PM.
             </p>
           </div>
-        </div>
 
-        <DialogFooter className="mt-4 flex gap-2 justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            className="wireframe-button"
-            data-variant="outline"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className="wireframe-button"
-            onClick={handleSave}
-            disabled={!isValid}
-          >
-            Save reminder
-          </Button>
-        </DialogFooter>
+          <div className="flex gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="flex-1 wireframe-button"
+              data-variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveClick}
+              className="flex-1 wireframe-button"
+            >
+              Save time
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
-

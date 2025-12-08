@@ -1,22 +1,19 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Calendar, Clock, Dumbbell, Edit, Trash2 } from "lucide-react";
-import { Workout } from "../types";
-import { useApp } from "../lib/context";
 import { useState } from "react";
-import { WorkoutDialog } from "./WorkoutDialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Separator } from "./ui/separator";
+import { Calendar, Clock, Dumbbell, Trash2, Pencil } from "lucide-react";
+import { Workout } from "../types";
+import { WorkoutDialog } from "./WorkoutDialog";
+import { useApp } from "../lib/context";
+import { toast } from "sonner";
 
 interface WorkoutDetailsDialogProps {
   open: boolean;
@@ -24,13 +21,21 @@ interface WorkoutDetailsDialogProps {
   workout: Workout | null;
 }
 
-function parseDateSafe(dateString: string) {
-  if (!dateString) return null;
+function formatLongDate(dateString: string | undefined) {
+  if (!dateString) return "";
   const normalized = dateString.includes("T")
     ? dateString
     : `${dateString}T00:00:00`;
-  const date = new Date(normalized);
-  return isNaN(date.getTime()) ? null : date;
+
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return dateString;
+
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 export function WorkoutDetailsDialog({
@@ -39,177 +44,218 @@ export function WorkoutDetailsDialog({
   workout,
 }: WorkoutDetailsDialogProps) {
   const { deleteWorkout, workouts } = useApp();
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
-  if (!workout) return null;
+ 
+  const resolvedWorkout =
+    workout && workouts
+      ? workouts.find((w) => w.id === workout.id) ?? workout
+      : workout;
 
-  const liveWorkout =
-    workouts.find((w) => w.id === workout.id) || workout;
-
-  const formatDate = (dateString: string) => {
-    const date = parseDateSafe(dateString);
-    if (!date) return dateString || "Unknown date";
-
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const handleDelete = () => {
-    deleteWorkout(liveWorkout.id);
-    setShowDeleteDialog(false);
+  const handleClose = () => {
     onClose();
   };
 
-  const handleEdit = () => {
-    setShowEdit(true);
+  if (!resolvedWorkout) {
+    return (
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+        <DialogContent className="sm:max-w-md bg-white rounded-none border-[6px] border-black wireframe-dialog">
+          <div className="px-8 py-8 space-y-6">
+            <DialogHeader>
+              <DialogTitle className="uppercase tracking-wide font-mono">
+                Workout Details
+              </DialogTitle>
+              <DialogDescription className="font-mono text-xs text-muted-foreground">
+                No workout selected.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                data-variant="outline"
+                className="wireframe-button"
+                onClick={handleClose}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const totalSets = resolvedWorkout.exercises.reduce(
+    (sum, ex) => sum + (ex.sets || 0),
+    0
+  );
+  const totalExercises = resolvedWorkout.exercises.length;
+  const longDate = formatLongDate(resolvedWorkout.date);
+
+  const actuallyDelete = () => {
+    if (!resolvedWorkout.id) return;
+    deleteWorkout(resolvedWorkout.id);
+    toast.success("Workout deleted");
+    setShowConfirmDelete(false);
+    handleClose();
   };
 
   return (
     <>
+      {/* MAIN DETAILS DIALOG */}
       <Dialog
-        open={open && !showEdit}
+        open={open}
         onOpenChange={(isOpen) => {
-          if (!isOpen) onClose();
+          if (!isOpen) handleClose();
         }}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-none border-[6px] border-black py-8">
-          <div className="px-10">
-            <DialogHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <DialogTitle className="text-xl uppercase tracking-wide font-mono">
-                    {liveWorkout.name}
-                  </DialogTitle>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground font-mono">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(liveWorkout.date)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {liveWorkout.duration} min
-                    </span>
-                  </div>
-                </div>
+        <DialogContent className="sm:max-w-2xl bg-white rounded-none border-[6px] border-black wireframe-dialog">
+          <div className="px-8 py-8 space-y-6">
+            {/* HEADER */}
+            <DialogHeader className="space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <DialogTitle className="uppercase tracking-wide font-mono text-xl">
+                  {resolvedWorkout.name || "Workout Details"}
+                </DialogTitle>
                 <Badge className="wireframe-badge">
-                  {liveWorkout.type}
+                  {resolvedWorkout.type}
                 </Badge>
               </div>
+              <DialogDescription className="font-mono text-sm text-muted-foreground">
+                Review, edit, or delete this logged workout.
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 mt-4">
-              <div>
-                <h3 className="uppercase tracking-wide mb-3">Exercises</h3>
-                <div className="space-y-2">
-                  {liveWorkout.exercises.map((exercise) => (
-                    <Card key={exercise.id} className="wireframe-card">
-                      <CardContent className="pt-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-muted rounded">
-                              <Dumbbell className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="font-medium uppercase tracking-wide">
-                                {exercise.name}
-                              </div>
-                              <div className="text-sm text-muted-foreground font-mono mt-1">
-                                {exercise.sets} sets × {exercise.reps} reps
-                                {exercise.weight && exercise.weight > 0 &&
-                                  ` • ${exercise.weight} lbs`}
-                              </div>
-                              {exercise.notes && (
-                                <p className="text-sm text-muted-foreground mt-1 font-mono">
-                                  {exercise.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+            {/* DATE + DURATION ROW */}
+            <div className="flex flex-wrap items-center gap-4 font-mono text-sm text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                {longDate}
+              </span>
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                {resolvedWorkout.duration ?? 0} min
+              </span>
+              <span className="flex items-center gap-2">
+                <Dumbbell className="w-4 h-4" />
+                {totalExercises} ex • {totalSets} sets
+              </span>
+            </div>
 
-              {liveWorkout.notes && (
-                <div>
-                  <h3 className="uppercase tracking-wide mb-2">Notes</h3>
-                  <Card className="wireframe-card">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-muted-foreground font-mono">
-                        {liveWorkout.notes}
+            <Separator className="wireframe-separator" />
+
+            {/* EXERCISES TITLE */}
+            <p className="uppercase tracking-wide text-xs font-mono">
+              Exercises
+            </p>
+
+            {/* EXERCISES LIST */}
+            <div className="space-y-3">
+              {resolvedWorkout.exercises.map((exercise, idx) => (
+                <div
+                  key={exercise.id ?? idx}
+                  className="border-[2px] border-black bg-white"
+                >
+                  <div className="border border-dashed border-black/40 m-[3px] px-5 py-4 flex gap-4 items-start">
+                    <div className="w-6 h-6 flex items-center justify-center">
+                      <Dumbbell className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 font-mono text-sm space-y-1">
+                      <p className="uppercase tracking-wide font-semibold">
+                        {exercise.name || `Exercise ${idx + 1}`}
                       </p>
-                    </CardContent>
-                  </Card>
+                      <p className="text-muted-foreground">
+                        {exercise.sets} sets × {exercise.reps} reps
+                        {exercise.weight
+                          ? ` • ${exercise.weight} ${
+                              (exercise as any).weightUnit ?? "lbs"
+                            }`
+                          : ""}
+                      </p>
+                      {exercise.notes && (
+                        <p className="text-xs text-muted-foreground">
+                          {exercise.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={handleEdit}
-                  className="flex-1 wireframe-button"
-                  data-variant="outline"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Workout
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="wireframe-button"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              </div>
+            {/* BUTTONS – EDIT + DELETE */}
+            <div className="pt-4 border-t border-black flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                data-variant="outline"
+                className="flex-1 wireframe-button py-4"
+                onClick={() => setShowEditDialog(true)}
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Workout
+              </Button>
+              <Button
+                className="flex-1 wireframe-button py-4"
+                variant="destructive"
+                onClick={() => setShowConfirmDelete(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* EDIT DIALOG */}
       <WorkoutDialog
-        open={showEdit}
-        onClose={() => {
-          setShowEdit(false);
-        }}
-        workout={liveWorkout}
+        open={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        workout={resolvedWorkout}
       />
 
-      <AlertDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
+      {/* CONFIRM DELETE DIALOG */}
+      <Dialog
+        open={showConfirmDelete}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setShowConfirmDelete(false);
+        }}
       >
-        <AlertDialogContent className="sm:max-w-md bg-white rounded-none border-[6px] border-black py-8">
-          <div className="px-10">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="uppercase tracking-wide font-mono">
+        <DialogContent className="sm:max-w-sm bg-white rounded-none border-[6px] border-black wireframe-dialog">
+          <div className="px-6 py-6 space-y-4">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="uppercase tracking-wide font-mono text-lg">
                 Delete Workout?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="font-mono">
-                This action cannot be undone. This will permanently delete your workout data.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-4">
-              <AlertDialogCancel className="wireframe-button" data-variant="outline">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="wireframe-button bg-destructive text-destructive-foreground"
+              </DialogTitle>
+              <DialogDescription className="font-mono text-sm text-muted-foreground">
+                This will permanently remove this workout and its exercises from
+                your history. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowConfirmDelete(false)}
+                className="flex-1 wireframe-button"
+                data-variant="outline"
               >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={actuallyDelete}
+                className="flex-1 wireframe-button"
+              >
+                Delete workout
+              </Button>
+            </div>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

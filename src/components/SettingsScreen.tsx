@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   User,
   Bell,
-  Moon,
   Shield,
   HelpCircle,
   LogOut,
@@ -38,26 +37,22 @@ export function SettingsScreen() {
   ) => {
     if (!settings) return;
 
+    
+    const currentNotifications = settings.notifications || {
+      workoutReminders: false,
+      achievements: true,
+      dailyTips: true,
+    };
+
     updateSettings({
       ...settings,
       notifications: {
-        ...settings.notifications,
+        ...currentNotifications,
         [key]: value,
       },
     });
 
     toast.success("Settings updated");
-  };
-
-  const handleToggleDarkMode = (value: boolean) => {
-    if (!settings) return;
-
-    updateSettings({
-      ...settings,
-      darkMode: value,
-    });
-
-    toast.info(value ? "Dark mode enabled" : "Dark mode disabled");
   };
 
   const handleToggleBackup = (value: boolean) => {
@@ -202,7 +197,7 @@ export function SettingsScreen() {
               </p>
             </div>
             <Switch
-              checked={settings?.notifications.workoutReminders}
+              checked={!!settings?.notifications?.workoutReminders}
               onCheckedChange={(checked) =>
                 handleToggleSetting("workoutReminders", checked)
               }
@@ -220,7 +215,7 @@ export function SettingsScreen() {
               </p>
             </div>
             <Switch
-              checked={settings?.notifications.achievements}
+              checked={!!settings?.notifications?.achievements}
               onCheckedChange={(checked) =>
                 handleToggleSetting("achievements", checked)
               }
@@ -236,7 +231,7 @@ export function SettingsScreen() {
               </p>
             </div>
             <Switch
-              checked={settings?.notifications.dailyTips}
+              checked={!!settings?.notifications?.dailyTips}
               onCheckedChange={(checked) =>
                 handleToggleSetting("dailyTips", checked)
               }
@@ -256,23 +251,11 @@ export function SettingsScreen() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 flex items-center gap-2">
-              <Moon className="w-4 h-4" />
-              <Label className="uppercase tracking-wide">Dark mode</Label>
-            </div>
-            <Switch
-              checked={settings?.darkMode}
-              onCheckedChange={handleToggleDarkMode}
-              className="wireframe-switch"
-            />
-          </div>
-          <Separator className="wireframe-separator" />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5 flex items-center gap-2">
               <Shield className="w-4 h-4" />
               <Label className="uppercase tracking-wide">Data backup</Label>
             </div>
             <Switch
-              checked={settings?.dataBackup}
+              checked={!!settings?.dataBackup}
               onCheckedChange={handleToggleBackup}
               className="wireframe-switch"
             />

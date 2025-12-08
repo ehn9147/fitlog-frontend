@@ -1,4 +1,4 @@
-// src/components/MainApp.tsx
+
 import { useState, useEffect } from "react";
 import { HomeScreen } from "./HomeScreen";
 import { HistoryScreen } from "./HistoryScreen";

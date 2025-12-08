@@ -12,7 +12,7 @@ import {
 } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Card, CardContent } from "./ui/card";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Dumbbell } from "lucide-react";
 import { Workout, Exercise } from "../types";
 import { useApp } from "../lib/context";
 import { toast } from "sonner";
@@ -24,17 +24,19 @@ interface WorkoutDialogProps {
 }
 
 const createEmptyExercise = (): Exercise => ({
-  id: typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()}`,
+  id:
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`,
   name: "",
-  sets: 3,
-  reps: 10,
+  sets: 0,
+  reps: 0,
   weight: 0,
 });
 
 export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
   const { user, addWorkout, updateWorkout } = useApp();
+
   const [name, setName] = useState(workout?.name || "");
   const [type, setType] = useState<string>(workout?.type || "Strength");
   const [date, setDate] = useState(
@@ -55,7 +57,9 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
       setName(workout.name);
       setType(workout.type);
       setDate(workout.date);
-      setDuration(workout.duration.toString());
+      setDuration(
+        workout.duration !== undefined ? workout.duration.toString() : ""
+      );
       setNotes(workout.notes || "");
       setExercises(
         workout.exercises.length > 0
@@ -106,22 +110,34 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
       return;
     }
 
-    const workoutData: Workout = {
-      id: workout?.id || Date.now().toString(),
+    
+    const baseData = {
       userId: user.id,
       name: name.trim(),
       type: type as Workout["type"],
       date,
       duration: parseInt(duration, 10),
-      exercises: exercises.filter((e) => e.name.trim() !== ""),
+      exercises: exercises
+        .filter((e) => e.name.trim() !== "")
+        .map((e) => ({
+          
+          name: e.name,
+          sets: e.sets,
+          reps: e.reps,
+          weight: e.weight,
+        })),
       notes: notes.trim(),
     };
 
-    if (workout) {
-      updateWorkout(workoutData);
+    if (workout && workout.id) {
+      
+      updateWorkout({
+        ...workout,
+        ...baseData,
+      });
       toast.success("Workout updated successfully");
     } else {
-      addWorkout(workoutData);
+      addWorkout(baseData as Workout);
       toast.success("Workout logged successfully");
     }
 
@@ -132,8 +148,8 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-none border-[6px] border-black py-8">
-        <div className="px-10">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-none border-[6px] border-black wireframe-dialog">
+        <div className="px-8 py-8">
           <DialogHeader>
             <DialogTitle className="uppercase tracking-wide font-mono">
               {workout ? "Edit Workout" : "Log New Workout"}
@@ -141,6 +157,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
+            {/* Name + Type */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="uppercase tracking-wide">
@@ -172,6 +189,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
               </div>
             </div>
 
+            {/* Date + Duration */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date" className="uppercase tracking-wide">
@@ -200,6 +218,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
               </div>
             </div>
 
+            {/* Exercises header + add button */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label className="uppercase tracking-wide">Exercises</Label>
@@ -216,87 +235,106 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
                 </Button>
               </div>
 
+              {/* Exercise cards list */}
               <div className="space-y-3 max-h-[300px] overflow-y-auto">
                 {exercises.map((exercise) => (
                   <Card key={exercise.id} className="wireframe-card">
-                    <CardContent className="pt-4 space-y-3">
-                      <div className="flex justify-between items-start gap-2">
-                        <Input
-                          value={exercise.name}
-                          onChange={(e) =>
-                            handleExerciseChange(
-                              exercise.id,
-                              "name",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Exercise name"
-                          className="wireframe-input"
-                        />
-                        {exercises.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveExercise(exercise.id)}
-                            className="wireframe-button"
-                            data-variant="ghost"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <Label className="text-xs uppercase tracking-wide">
-                            Sets
-                          </Label>
-                          <Input
-                            type="number"
-                            value={exercise.sets}
-                            onChange={(e) =>
-                              handleExerciseChange(
-                                exercise.id,
-                                "sets",
-                                parseInt(e.target.value, 10) || 0
-                              )
-                            }
-                            className="wireframe-input"
-                          />
+                    <CardContent className="px-5 py-4 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-start justify-start pt-[2px]">
+                          <div className="w-6 h-6 flex items-center justify-center">
+                            <Dumbbell className="w-4 h-4" />
+                          </div>
                         </div>
-                        <div>
-                          <Label className="text-xs uppercase tracking-wide">
-                            Reps
-                          </Label>
-                          <Input
-                            type="number"
-                            value={exercise.reps}
-                            onChange={(e) =>
-                              handleExerciseChange(
-                                exercise.id,
-                                "reps",
-                                parseInt(e.target.value, 10) || 0
-                              )
-                            }
-                            className="wireframe-input"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs uppercase tracking-wide">
-                            Weight (lbs)
-                          </Label>
-                          <Input
-                            type="number"
-                            value={exercise.weight || ""}
-                            onChange={(e) =>
-                              handleExerciseChange(
-                                exercise.id,
-                                "weight",
-                                parseInt(e.target.value, 10) || 0
-                              )
-                            }
-                            className="wireframe-input"
-                          />
+
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1">
+                              <Label className="text-xs uppercase tracking-wide font-mono">
+                                Exercise name
+                              </Label>
+                              <Input
+                                value={exercise.name}
+                                onChange={(e) =>
+                                  handleExerciseChange(
+                                    exercise.id,
+                                    "name",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Exercise name"
+                                className="wireframe-input mt-1"
+                              />
+                            </div>
+                            {exercises.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleRemoveExercise(exercise.id)
+                                }
+                                className="wireframe-button mt-6"
+                                data-variant="ghost"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs uppercase tracking-wide font-mono">
+                                Sets
+                              </Label>
+                              <Input
+                                type="number"
+                                value={exercise.sets}
+                                onChange={(e) =>
+                                  handleExerciseChange(
+                                    exercise.id,
+                                    "sets",
+                                    parseInt(e.target.value, 10) || 0
+                                  )
+                                }
+                                className="wireframe-input mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs uppercase tracking-wide font-mono">
+                                Reps
+                              </Label>
+                              <Input
+                                type="number"
+                                value={exercise.reps}
+                                onChange={(e) =>
+                                  handleExerciseChange(
+                                    exercise.id,
+                                    "reps",
+                                    parseInt(e.target.value, 10) || 0
+                                  )
+                                }
+                                className="wireframe-input mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs uppercase tracking-wide font-mono">
+                                Weight (lbs)
+                              </Label>
+                              <Input
+                                type="number"
+                                value={exercise.weight || ""}
+                                onChange={(e) =>
+                                  handleExerciseChange(
+                                    exercise.id,
+                                    "weight",
+                                    parseInt(e.target.value, 10) || 0
+                                  )
+                                }
+                                className="wireframe-input mt-1"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -305,6 +343,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
               </div>
             </div>
 
+            {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes" className="uppercase tracking-wide">
                 Notes (Optional)
@@ -319,6 +358,7 @@ export function WorkoutDialog({ open, onClose, workout }: WorkoutDialogProps) {
               />
             </div>
 
+            {/* Footer */}
             <div className="space-y-2">
               {!isFormValid && (
                 <div className="p-2 bg-muted rounded text-center">
